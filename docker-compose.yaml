@@ -1,0 +1,23 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: always
+    shm_size: 128mb
+    networks:
+      - backend
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: "P@ssw0rd1"
+    command: postgres --track_commit_timestamp=on
+    volumes:
+      - db-data:/var/lib/sql/data
+      - ./db:/docker-entrypoint-initdb.d
+
+networks:
+  backend:
+
+volumes:
+  db-data:
+    driver: local
