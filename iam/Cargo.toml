@@ -1,0 +1,7 @@
+[package]
+name = "iam"
+version = "0.1.0"
+edition = "2021"
+authors = ["Mauro Franceschini <mauro.franceschini@gmail.com>"]
+
+[dependencies]
