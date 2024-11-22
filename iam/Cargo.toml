@@ -18,3 +18,6 @@ sqlx = { version = "0.8.2" }
 thiserror = "2"
 anyhow = "1.0.93"
 argon2 = "0.5.3"
+regex = "1.11.1"
+common = { version = "0.1.0", path = "../common" }
+rand = "0.8.5"

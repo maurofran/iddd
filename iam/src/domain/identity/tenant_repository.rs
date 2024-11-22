@@ -6,7 +6,7 @@ use crate::domain::identity::{Tenant, TenantId, TenantName};
 pub enum TenantRepositoryError {
     #[error("no tenant found for {0}")]
     NotFound(TenantId),
-    #[error("no tenant found for name '{1}'")]
+    #[error("no tenant found for name '{0}'")]
     NameNotFound(TenantName),
     #[error("a tenant with name '{0}' already exists")]
     Exists(TenantName)
