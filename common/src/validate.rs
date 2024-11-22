@@ -1,5 +1,6 @@
 use regex::Regex;
 use thiserror::Error;
+use uuid::Uuid;
 
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum Error {
@@ -122,4 +123,10 @@ pub fn matches(name: &str, value: &str, regex: Regex) -> Result<(), Error> {
     } else {
         Ok(())
     }
+}
+
+/// Validated that the provided value is a valid UUID.
+pub fn uuid(name: &str, value: &str) -> Result<Uuid, Error> {
+    Uuid::parse_str(value)
+        .map_err(|_| Error::InvalidFormat(name.into()))
 }

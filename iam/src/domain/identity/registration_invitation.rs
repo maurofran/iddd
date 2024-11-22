@@ -1,8 +1,11 @@
+mod invitation_id;
+
+pub use invitation_id::InvitationId;
+
 use crate::domain::identity::InvitationValidity::{Between, OpenEnded, StartingOn, Until};
 use chrono::{DateTime, Utc};
 use std::fmt::Display;
 use thiserror::Error;
-use uuid::Uuid;
 use crate::domain::identity::InvitationValidityError::{InvalidEndDate, InvalidStartDate};
 
 /// Entity representing an invitation to register a tenant.
@@ -65,61 +68,6 @@ impl RegistrationInvitation {
     pub fn redefine_as(&mut self, redefiner_fn: InvitationRedefiner) -> Result<(), InvitationValidityError> {
         self.validity = redefiner_fn(self.validity.clone())?;
         Ok(())
-    }
-}
-
-/// InvitationId is a simple type for an invitation identifier.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct InvitationId(String);
-
-#[derive(Error, Clone, Debug, PartialEq)]
-pub enum InvitationIdError {
-    #[error("the invitation id is required")]
-    Required,
-    #[error("the invitation id must be 36 characters or less")]
-    TooLong,
-}
-
-impl InvitationId {
-    /// Generates a random `InvitationId`.
-    pub fn random() -> Self {
-        InvitationId(Uuid::new_v4().into())
-    }
-
-    /// Creates a new `InvitationId` from a string.
-    pub fn new(id: &str) -> Result<Self, InvitationIdError> {
-        if id.is_empty() {
-            Err(InvitationIdError::Required)
-        } else if id.len() > 36 {
-            Err(InvitationIdError::TooLong)
-        } else {
-            Ok(InvitationId(id.into()))
-        }
-    }
-
-    /// Returns the invitation id as a string.
-    pub fn into_string(self) -> String {
-        self.0
-    }
-}
-
-impl Display for InvitationId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl TryFrom<&str> for InvitationId {
-    type Error = InvitationIdError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        InvitationId::new(value)
-    }
-}
-
-impl AsRef<str> for InvitationId {
-    fn as_ref(&self) -> &str {
-        &self.0
     }
 }
 
@@ -243,36 +191,5 @@ impl Display for InvitationValidity {
             Until(date) => write!(f, "until {}", date),
             Between(start, end) => write!(f, "between {} and {}", start, end),
         }
-    }
-}
-
-#[cfg(test)]
-mod invitation_id_tests {
-    use super::*;
-
-    #[test]
-    fn test_new_ok() {
-        let id = InvitationId::new("test-id").unwrap();
-        assert_eq!(id.into_string(), "test-id");
-    }
-
-    #[test]
-    fn test_new_error_required() {
-        let result = InvitationId::new("");
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), InvitationIdError::Required);
-    }
-
-    #[test]
-    fn test_new_error_too_long() {
-        let result = InvitationId::new("a".repeat(37).as_str());
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), InvitationIdError::TooLong);
-    }
-
-    #[test]
-    fn test_into_string() {
-        let id = InvitationId::new("test-id").unwrap();
-        assert_eq!(id.into_string(), "test-id");
     }
 }

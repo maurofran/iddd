@@ -1,0 +1,9 @@
+[package]
+name = "common"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+thiserror = "2.0.3"
+regex = "1.11.1"
+uuid = { version = "1.11.0", features = ["fast-rng", "v4", "serde"] }

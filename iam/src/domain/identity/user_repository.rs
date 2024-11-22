@@ -1,5 +1,5 @@
 use thiserror::Error;
-use crate::domain::identity::{Tenant, TenantId, TenantName, User, Username};
+use crate::domain::identity::{TenantId, User, Username};
 use anyhow::Result;
 
 /// Error types for `UserRepository`.
@@ -18,5 +18,5 @@ pub trait UserRepository {
     fn find_by_username(&self, tenant_id: &TenantId, username: &Username) -> Result<&User>;
     fn find_by_username_mut(&self, tenant_id: &TenantId, username: &Username) -> Result<&mut User>;
     fn find_all_similarly_named(&self, id: &TenantId, first_name_prefix: &str,
-                                last_name_prefix: &str) -> Result<Vec<&Tenant>>;
+                                last_name_prefix: &str) -> Result<Vec<&User>>;
 }

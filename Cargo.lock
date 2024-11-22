@@ -278,6 +278,7 @@ version = "0.1.0"
 dependencies = [
  "regex",
  "thiserror 2.0.3",
+ "uuid",
 ]
 
 [[package]]
