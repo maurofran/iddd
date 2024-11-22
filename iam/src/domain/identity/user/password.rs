@@ -155,7 +155,7 @@ impl EncryptedPassword {
         Self(encrypted_password.to_string())
     }
 
-    pub fn verify(&self, password: PlainPassword) -> anyhow::Result<bool> {
+    pub fn verify(&self, password: &PlainPassword) -> anyhow::Result<bool> {
         let parsed_hash = PasswordHash::new(&self.0).map_err(|err| anyhow!(err))?;
         let argon2 = Argon2::default();
         match argon2.verify_password(&password.0.as_bytes(), &parsed_hash) {
@@ -192,6 +192,12 @@ impl Into<String> for EncryptedPassword {
 impl AsRef<str> for EncryptedPassword {
     fn as_ref(&self) -> &str {
         &self.0
+    }
+}
+
+impl Default for EncryptedPassword {
+    fn default() -> Self {
+        PlainPassword::default().encrypt().unwrap()
     }
 }
 
@@ -257,7 +263,7 @@ pub mod tests {
     fn verify_success() {
         let password = PlainPassword::new("P@ssw0rd1");
         let encrypted = password.encrypt().unwrap();
-        let verified = encrypted.verify(password).unwrap();
+        let verified = encrypted.verify(&password).unwrap();
         assert!(verified);
     }
 
@@ -266,7 +272,7 @@ pub mod tests {
         let password = PlainPassword::new("P@ssw0rd1");
         let encrypted = password.encrypt().unwrap();
         let wrong_password = PlainPassword::new("wrong");
-        let verified = encrypted.verify(wrong_password).unwrap();
+        let verified = encrypted.verify(&wrong_password).unwrap();
         assert!(!verified);
     }
 

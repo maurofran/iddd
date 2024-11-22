@@ -21,6 +21,8 @@ pub enum Error {
     NotInRange(String, String, String),
     #[error("{0} format is invalid")]
     InvalidFormat(String),
+    #[error("{0}")]
+    Generic(String),
 }
 
 /// Validates that a value is not empty.
@@ -46,6 +48,22 @@ pub fn not_equals<T: PartialEq + ToString>(name: &str, value: T, expected: T) ->
         Err(Error::NotEqual(name.into(), expected.to_string()))
     } else {
         Ok(())
+    }
+}
+
+pub fn is_true(value: bool, msg: &str) -> Result<(), Error> {
+    if !value {
+        Ok(())
+    } else {
+        Err(Error::Generic(msg.into()))
+    }
+}
+
+pub fn is_false(value: bool, msg: &str) -> Result<(), Error> {
+    if !value {
+        Ok(())
+    } else {
+        Err(Error::Generic(msg.into()))
     }
 }
 
