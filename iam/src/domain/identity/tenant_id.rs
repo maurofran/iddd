@@ -18,12 +18,7 @@ impl TenantId {
     /// Creates a new tenant identifier from a raw string.
     pub fn new(raw_tenant_id: &str) -> Result<Self> {
         let uuid = validate::uuid(TENANT_ID, raw_tenant_id)?;
-        Ok(Self(uuid))
-    }
-
-    /// Converts the tenant identifier to a UUID.
-    pub fn into_uuid(self) -> Uuid {
-        self.0
+        Ok(uuid.into())
     }
 }
 
@@ -38,6 +33,18 @@ impl TryFrom<&str> for TenantId {
 
     fn try_from(value: &str) -> Result<Self> {
         TenantId::new(value)
+    }
+}
+
+impl From<Uuid> for TenantId {
+    fn from(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+}
+
+impl From<TenantId> for Uuid {
+    fn from(tenant_id: TenantId) -> Self {
+        tenant_id.0
     }
 }
 
@@ -72,7 +79,7 @@ mod tests {
     #[test]
     fn test_into_uuid() {
         let tenant_id = TenantId::new("123e4567-e89b-12d3-a456-426655440000").unwrap();
-        let uuid = tenant_id.into_uuid();
+        let uuid: Uuid = tenant_id.into();
         assert_eq!(
             uuid,
             Uuid::parse_str("123e4567-e89b-12d3-a456-426655440000").unwrap()

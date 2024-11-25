@@ -1,6 +1,8 @@
 mod invitation_id;
+mod invitation_description;
 
 pub use invitation_id::InvitationId;
+pub use invitation_description::InvitationDescription;
 
 use crate::domain::identity::InvitationValidity::{Between, OpenEnded, StartingOn, Until};
 use chrono::{DateTime, Utc};
@@ -68,56 +70,6 @@ impl RegistrationInvitation {
     pub fn redefine_as(&mut self, redefiner_fn: InvitationRedefiner) -> Result<(), InvitationValidityError> {
         self.validity = redefiner_fn(self.validity.clone())?;
         Ok(())
-    }
-}
-
-/// InvitationDescription is a simple type for an invitation description.
-#[derive(Debug, Clone, PartialEq)]
-pub struct InvitationDescription(String);
-
-/// Error for InvitationDescription.
-#[derive(Error, Clone, Debug, PartialEq)]
-pub enum InvitationDescriptionError {
-    #[error("the invitation description is required")]
-    Required,
-    #[error("the invitation description must be 100 characters or less")]
-    TooLong,
-}
-
-impl InvitationDescription {
-    /// Creates a new `InvitationDescription` from a string.
-    pub fn new(description: &str) -> Result<Self, InvitationDescriptionError> {
-        if description.is_empty() {
-            Err(InvitationDescriptionError::Required)
-        } else if description.len() > 100 {
-            Err(InvitationDescriptionError::TooLong)
-        } else {
-            Ok(InvitationDescription(description.into()))
-        }
-    }
-
-    pub fn into_string(self) -> String {
-        self.0
-    }
-}
-
-impl Display for InvitationDescription {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl TryFrom<&str> for InvitationDescription {
-    type Error = InvitationDescriptionError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        InvitationDescription::new(value)
-    }
-}
-
-impl AsRef<str> for InvitationDescription {
-    fn as_ref(&self) -> &str {
-        &self.0
     }
 }
 

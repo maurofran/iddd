@@ -109,13 +109,13 @@ impl Tenant {
     pub fn offer_invitation(&mut self, description: InvitationDescription) -> Result<&mut RegistrationInvitation, TenantError> {
         self.assert_active()?;
         if self.is_registration_available_through(description.as_ref())? {
-            return Err(TenantError::InvitationExists(description.into_string()));
+            return Err(TenantError::InvitationExists(description.into()));
         }
         let invitation = RegistrationInvitation::new(description.clone());
         self.invitations.push(invitation);
         match self.invitation_mut(description.as_ref()) {
             Some(invitation) => Ok(invitation),
-            None => Err(TenantError::InvitationNotFound(description.into_string())),
+            None => Err(TenantError::InvitationNotFound(description.into())),
         }
     }
 
