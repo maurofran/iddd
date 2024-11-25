@@ -1,14 +1,13 @@
 mod invitation_id;
 mod invitation_description;
+mod invitation_validity;
 
-pub use invitation_id::InvitationId;
 pub use invitation_description::InvitationDescription;
+pub use invitation_id::InvitationId;
+pub use invitation_validity::InvitationValidity;
 
-use crate::domain::identity::InvitationValidity::{Between, OpenEnded, StartingOn, Until};
-use chrono::{DateTime, Utc};
+use anyhow::Result;
 use std::fmt::Display;
-use thiserror::Error;
-use crate::domain::identity::InvitationValidityError::{InvalidEndDate, InvalidStartDate};
 
 /// Entity representing an invitation to register a tenant.
 pub struct RegistrationInvitation {
@@ -18,7 +17,7 @@ pub struct RegistrationInvitation {
 }
 
 /// Function type used to redefine the validity of an invitation.
-pub type InvitationRedefiner = fn(InvitationValidity) -> Result<InvitationValidity, InvitationValidityError>;
+pub type InvitationRedefiner = fn(InvitationValidity) -> Result<InvitationValidity>;
 
 impl RegistrationInvitation {
     /// Function used by repositories to hydrate `RegistrationInvitation` from the database.
@@ -67,81 +66,8 @@ impl RegistrationInvitation {
     }
 
     /// Redefine the validity of the invitation with the provided closure function.
-    pub fn redefine_as(&mut self, redefiner_fn: InvitationRedefiner) -> Result<(), InvitationValidityError> {
+    pub fn redefine_as(&mut self, redefiner_fn: InvitationRedefiner) -> Result<()> {
         self.validity = redefiner_fn(self.validity.clone())?;
         Ok(())
-    }
-}
-
-/// InvitationValidity is the enum representing the validity of an invitation.
-#[derive(Clone, Debug, PartialEq)]
-pub enum InvitationValidity {
-    // An always valid validity.
-    OpenEnded,
-    // A validity starting on specified date.
-    StartingOn(DateTime<Utc>),
-    // A validity ending on specified date.
-    Until(DateTime<Utc>),
-    // A validity valid between specified dates.
-    Between(DateTime<Utc>, DateTime<Utc>),
-}
-
-#[derive(Error, Clone, Debug, PartialEq)]
-pub enum InvitationValidityError {
-    #[error("the start date must occurs before {0}")]
-    InvalidStartDate(DateTime<Utc>),
-    #[error("the end date must occurs after {0}")]
-    InvalidEndDate(DateTime<Utc>),
-}
-
-impl InvitationValidity {
-    /// Factory function used to create an always valid invitation validity.
-    pub fn open_ended() -> Self {
-        OpenEnded
-    }
-
-    /// Creates a new `InvitationValidity` with provided starting date.
-    pub fn starting_on(&self, date: DateTime<Utc>) -> Result<Self, InvitationValidityError> {
-        match self {
-            OpenEnded | StartingOn(_) => Ok(StartingOn(date)),
-            Until(end) | Between(_, end) => if &date > end {
-                Err(InvalidStartDate(end.clone()))
-            } else {
-                Ok(Between(date, end.clone()))
-            }
-        }
-    }
-
-    /// Creates a new `InvitationValidity` with provided ending date.
-    pub fn until(&self, date: DateTime<Utc>) -> Result<Self, InvitationValidityError> {
-        match self {
-            OpenEnded | Until(_) => Ok(Until(date)),
-            StartingOn(start) | Between(start, _) => if &date < start {
-                Err(InvalidEndDate(start.clone()))
-            } else {
-                Ok(Between(start.clone(), date))
-            }
-        }
-    }
-
-    /// Check if the invitation is available now.
-    fn is_available(&self) -> bool {
-        match self {
-            OpenEnded => true,
-            StartingOn(date) => date <= &Utc::now(),
-            Until(date) => date >= &Utc::now(),
-            Between(start, end) => start <= &Utc::now() && end >= &Utc::now(),
-        }
-    }
-}
-
-impl Display for InvitationValidity {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            OpenEnded => write!(f, "open-ended"),
-            StartingOn(date) => write!(f, "starting on {}", date),
-            Until(date) => write!(f, "until {}", date),
-            Between(start, end) => write!(f, "between {} and {}", start, end),
-        }
     }
 }

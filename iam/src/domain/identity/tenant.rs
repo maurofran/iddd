@@ -1,6 +1,7 @@
+use crate::domain::identity::{InvitationDescription, InvitationDescriptor, InvitationRedefiner, RegistrationInvitation, TenantId};
+use anyhow::Result;
 use std::fmt::Display;
 use thiserror::Error;
-use crate::domain::identity::{InvitationDescription, InvitationDescriptor, InvitationRedefiner, InvitationValidityError, RegistrationInvitation, TenantId};
 
 // Tenant struct represent the aggregate root of the tenant domain.
 pub struct Tenant {
@@ -19,8 +20,6 @@ pub enum TenantError {
     InvitationExists(String),
     #[error("invitation with identifier {0} not found")]
     InvitationNotFound(String),
-    #[error(transparent)]
-    InvalidInvitationValidity(#[from] InvitationValidityError)
 }
 
 impl Tenant {
@@ -120,12 +119,12 @@ impl Tenant {
     }
 
     /// Redefine an existing registration invitation for the `Tenant`.
-    pub fn redefine_invitation_as(&mut self, identifier: &str, redefiner_fn: InvitationRedefiner) -> Result<(), TenantError> {
+    pub fn redefine_invitation_as(&mut self, identifier: &str, redefiner_fn: InvitationRedefiner) -> Result<()> {
         self.assert_active()?;
         if let Some(invitation) = self.invitation_mut(identifier) {
             invitation.redefine_as(redefiner_fn).map_err(|e| e.into())
         } else {
-            Err(TenantError::InvitationExists(identifier.to_string()))
+            Err(TenantError::InvitationExists(identifier.to_string()).into())
         }
     }
 
