@@ -89,6 +89,12 @@ impl InvitationValidity {
     }
 }
 
+impl Default for InvitationValidity {
+    fn default() -> Self {
+        InvitationValidity::OpenEnded
+    }
+}
+
 impl Display for InvitationValidity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

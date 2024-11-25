@@ -7,9 +7,9 @@ pub use invitation_id::InvitationId;
 pub use invitation_validity::InvitationValidity;
 
 use anyhow::Result;
-use std::fmt::Display;
 
 /// Entity representing an invitation to register a tenant.
+#[derive(Debug, PartialEq)]
 pub struct RegistrationInvitation {
     invitation_id: InvitationId,
     description: InvitationDescription,
@@ -37,7 +37,7 @@ impl RegistrationInvitation {
         Self {
             invitation_id: InvitationId::random(),
             description,
-            validity: InvitationValidity::open_ended()
+            validity: InvitationValidity::default(),
         }
     }
 
@@ -61,6 +61,7 @@ impl RegistrationInvitation {
         self.invitation_id.as_ref() == identifier || self.description.as_ref() == identifier
     }
 
+    /// Check if the invitation is available now.
     pub fn is_available(&self) -> bool {
         self.validity.is_available()
     }
@@ -69,5 +70,61 @@ impl RegistrationInvitation {
     pub fn redefine_as(&mut self, redefiner_fn: InvitationRedefiner) -> Result<()> {
         self.validity = redefiner_fn(self.validity.clone())?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hydrate() {
+        let invitation_id = InvitationId::random();
+        let description = InvitationDescription::new("a_description").unwrap();
+        let validity = InvitationValidity::default();
+
+        let fixture = RegistrationInvitation::hydrate(invitation_id.clone(),
+                                                      description.clone(), validity.clone());
+
+        assert_eq!(fixture.invitation_id(), &invitation_id);
+        assert_eq!(fixture.description(), &description);
+        assert_eq!(fixture.validity(), &validity);
+    }
+
+    #[test]
+    pub fn test_new() {
+        let description = InvitationDescription::new("a_description").unwrap();
+        let fixture = RegistrationInvitation::new(description.clone());
+
+        assert_eq!(fixture.description(), &description);
+        assert_eq!(fixture.validity(), &InvitationValidity::default());
+    }
+
+    #[test]
+    pub fn test_is_identified_by_id() {
+        let description = InvitationDescription::new("a_description").unwrap();
+        let fixture = RegistrationInvitation::new(description);
+
+        let identifier = fixture.invitation_id().as_ref();
+
+        assert!(fixture.is_identified_by(identifier));
+    }
+
+    #[test]
+    pub fn test_is_identified_by_description() {
+        let description = InvitationDescription::new("a_description").unwrap();
+        let fixture = RegistrationInvitation::new(description);
+
+        let identifier = fixture.description().as_ref();
+
+        assert!(fixture.is_identified_by(identifier));
+    }
+
+    #[test]
+    pub fn test_is_identified_by_not_identified() {
+        let description = InvitationDescription::new("a_description").unwrap();
+        let fixture = RegistrationInvitation::new(description);
+
+        assert!(!fixture.is_identified_by("other"));
     }
 }
