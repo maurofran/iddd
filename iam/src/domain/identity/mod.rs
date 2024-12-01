@@ -11,10 +11,18 @@ mod user_descriptor;
 mod user_repository;
 mod person;
 mod password;
+mod group_member;
+mod group;
+mod group_member_service;
+mod group_repository;
 
 pub use contact_information::*;
 pub use enablement::*;
 pub use full_name::*;
+pub use group::*;
+pub use group_member::*;
+pub use group_member_service::*;
+pub use group_repository::*;
 pub use invitation_descriptor::*;
 pub use password::*;
 pub use person::*;
