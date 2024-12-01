@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::{Error, SaltString};
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
@@ -11,8 +11,6 @@ const SYMBOLS: &str = "\"`!?$?%^&*()_-+={[}]:;@'~#|\\<,>.?/";
 
 const STRONG_THRESHOLD: usize = 20;
 const VERY_STRONG_THRESHOLD: usize = 40;
-
-const PASSWORD: &str = "password";
 
 /// Value object representing a plain text password.
 #[derive(Debug, PartialEq, Clone)]
@@ -105,7 +103,7 @@ impl PlainPassword {
     }
 
     /// Encrypts the plain text password.
-    pub fn encrypt(&self) -> anyhow::Result<EncryptedPassword> {
+    pub fn encrypt(&self) -> Result<EncryptedPassword> {
         let salt = SaltString::generate(&mut OsRng);
         let argon2 = Argon2::default();
         let password_hash = argon2
@@ -155,7 +153,7 @@ impl EncryptedPassword {
         Self(encrypted_password.to_string())
     }
 
-    pub fn verify(&self, password: &PlainPassword) -> anyhow::Result<bool> {
+    pub fn verify(&self, password: &PlainPassword) -> Result<bool> {
         let parsed_hash = PasswordHash::new(&self.0).map_err(|err| anyhow!(err))?;
         let argon2 = Argon2::default();
         match argon2.verify_password(&password.0.as_bytes(), &parsed_hash) {

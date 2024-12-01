@@ -1,29 +1,31 @@
-mod invitation_id;
-mod invitation_description;
-mod invitation_validity;
+use std::fmt::Display;
+use std::ops::{RangeFrom, RangeInclusive, RangeToInclusive};
 
-pub use invitation_description::InvitationDescription;
-pub use invitation_id::InvitationId;
-pub use invitation_validity::InvitationValidity;
+use chrono::{DateTime, Utc};
+use common::constrained_string;
+use uuid::Uuid;
 
-use anyhow::Result;
+constrained_string!(InvitationId, 1, 36);
+constrained_string!(InvitationDescription, 1, 150);
+
+/// Invitation validity is a range of dates.
 
 /// Entity representing an invitation to register a tenant.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RegistrationInvitation {
     invitation_id: InvitationId,
     description: InvitationDescription,
     validity: InvitationValidity,
 }
 
-/// Function type used to redefine the validity of an invitation.
-pub type InvitationRedefiner = fn(InvitationValidity) -> Result<InvitationValidity>;
-
 impl RegistrationInvitation {
     /// Function used by repositories to hydrate `RegistrationInvitation` from the database.
-    /// Because of the use of the newtype patter, no invalid entity can be created.
-    pub fn hydrate(invitation_id: InvitationId, description: InvitationDescription,
-                   validity: InvitationValidity) -> Self {
+    /// Because of the use of the new type patter, no invalid entity can be created.
+    pub fn hydrate(
+        invitation_id: InvitationId,
+        description: InvitationDescription,
+        validity: InvitationValidity,
+    ) -> Self {
         RegistrationInvitation {
             invitation_id,
             description,
@@ -35,9 +37,9 @@ impl RegistrationInvitation {
     /// (open-ended).
     pub fn new(description: InvitationDescription) -> Self {
         Self {
-            invitation_id: InvitationId::random(),
+            invitation_id: InvitationId(Uuid::new_v4().into()),
             description,
-            validity: InvitationValidity::default(),
+            validity: InvitationValidity::OpenEnded,
         }
     }
 
@@ -67,9 +69,90 @@ impl RegistrationInvitation {
     }
 
     /// Redefine the validity of the invitation with the provided closure function.
-    pub fn redefine_as(&mut self, redefiner_fn: InvitationRedefiner) -> Result<()> {
-        self.validity = redefiner_fn(self.validity.clone())?;
-        Ok(())
+    pub fn redefine_as(&mut self, validity: InvitationValidity) {
+        self.validity = validity;
+    }
+}
+
+/// InvitationValidity is the enum representing the validity of an invitation.
+#[derive(Clone, Debug, PartialEq)]
+pub enum InvitationValidity {
+    // An always valid validity.
+    OpenEnded,
+    // A validity starting on specified date.
+    StartingOn(RangeFrom<DateTime<Utc>>),
+    // A validity ending on specified date.
+    Until(RangeToInclusive<DateTime<Utc>>),
+    // A validity valid between specified dates.
+    Between(RangeInclusive<DateTime<Utc>>),
+}
+
+impl InvitationValidity {
+    /// Getter for start date of the invitation.
+    pub fn start_date(&self) -> Option<&DateTime<Utc>> {
+        match self {
+            InvitationValidity::OpenEnded => None,
+            InvitationValidity::StartingOn(range) => Some(&range.start),
+            InvitationValidity::Until(_) => None,
+            InvitationValidity::Between(range) => Some(range.start()),
+        }
+    }
+
+    /// Getter for end date of the invitation.
+    pub fn end_date(&self) -> Option<&DateTime<Utc>> {
+        match self {
+            InvitationValidity::OpenEnded => None,
+            InvitationValidity::StartingOn(_) => None,
+            InvitationValidity::Until(range) => Some(&range.end),
+            InvitationValidity::Between(range) => Some(range.end()),
+        }
+    }
+
+    /// Check if the invitation is available now.
+    fn is_available(&self) -> bool {
+        match self {
+            InvitationValidity::OpenEnded => true,
+            InvitationValidity::StartingOn(range) => range.contains(&Utc::now()),
+            InvitationValidity::Until(range) => range.contains(&Utc::now()),
+            InvitationValidity::Between(range) => range.contains(&Utc::now()),
+        }
+    }
+}
+
+impl Default for InvitationValidity {
+    fn default() -> Self {
+        InvitationValidity::OpenEnded
+    }
+}
+
+impl Display for InvitationValidity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InvitationValidity::OpenEnded => write!(f, "open ended"),
+            InvitationValidity::StartingOn(range) => write!(f, "from {}", range.start),
+            InvitationValidity::Until(range) => write!(f, "to {}", range.end),
+            InvitationValidity::Between(range) => {
+                write!(f, "from {} to {}", range.start(), range.end())
+            }
+        }
+    }
+}
+
+impl From<RangeFrom<DateTime<Utc>>> for InvitationValidity {
+    fn from(range: RangeFrom<DateTime<Utc>>) -> Self {
+        InvitationValidity::StartingOn(range)
+    }
+}
+
+impl From<RangeToInclusive<DateTime<Utc>>> for InvitationValidity {
+    fn from(range: RangeToInclusive<DateTime<Utc>>) -> Self {
+        InvitationValidity::Until(range)
+    }
+}
+
+impl From<RangeInclusive<DateTime<Utc>>> for InvitationValidity {
+    fn from(range: RangeInclusive<DateTime<Utc>>) -> Self {
+        InvitationValidity::Between(range)
     }
 }
 
@@ -79,16 +162,19 @@ mod tests {
 
     #[test]
     fn test_hydrate() {
-        let invitation_id = InvitationId::random();
+        let invitation_id = InvitationId::new(Uuid::new_v4().to_string().as_str()).unwrap();
         let description = InvitationDescription::new("a_description").unwrap();
-        let validity = InvitationValidity::default();
+        let validity = InvitationValidity::OpenEnded;
 
-        let fixture = RegistrationInvitation::hydrate(invitation_id.clone(),
-                                                      description.clone(), validity.clone());
+        let fixture = RegistrationInvitation::hydrate(
+            invitation_id.clone(),
+            description.clone(),
+            validity.clone(),
+        );
 
         assert_eq!(fixture.invitation_id(), &invitation_id);
         assert_eq!(fixture.description(), &description);
-        assert_eq!(fixture.validity(), &validity);
+        assert_eq!(fixture.validity(), &InvitationValidity::OpenEnded);
     }
 
     #[test]
@@ -97,7 +183,7 @@ mod tests {
         let fixture = RegistrationInvitation::new(description.clone());
 
         assert_eq!(fixture.description(), &description);
-        assert_eq!(fixture.validity(), &InvitationValidity::default());
+        assert_eq!(fixture.validity(), &InvitationValidity::OpenEnded);
     }
 
     #[test]
@@ -126,5 +212,25 @@ mod tests {
         let fixture = RegistrationInvitation::new(description);
 
         assert!(!fixture.is_identified_by("other"));
+    }
+
+    #[test]
+    pub fn test_is_available_open_ended() {
+        let description = InvitationDescription::new("a_description").unwrap();
+        let fixture = RegistrationInvitation::new(description);
+
+        assert!(fixture.is_available());
+    }
+
+    #[test]
+    pub fn test_redefine_as() {
+        let description = InvitationDescription::new("a_description").unwrap();
+        let mut fixture = RegistrationInvitation::new(description);
+
+        let new_validity: InvitationValidity = (..=Utc::now() + chrono::Duration::days(30)).into();
+
+        fixture.redefine_as(new_validity.clone());
+
+        assert_eq!(fixture.validity(), &new_validity);
     }
 }

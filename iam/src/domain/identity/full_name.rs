@@ -1,6 +1,8 @@
+use common::constrained_string;
 use std::fmt::Display;
-use regex::Regex;
-use thiserror::Error;
+
+constrained_string!(FirstName, 1, 50, r"[A-Z][a-z]*");
+constrained_string!(LastName, 1, 50, r"^[a-zA-Z'][ a-zA-Z'-]*[a-zA-Z']?");
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FullName {
@@ -28,109 +30,23 @@ impl Display for FullName {
     }
 }
 
-fn first_name_regex() -> Regex {
-    Regex::new(r"[A-Z][a-z]*").unwrap()
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-/// First name is the new type for the first name.
-#[derive(Debug, Clone, PartialEq)]
-pub struct FirstName(String);
-
-impl FirstName {
-    pub fn new(first_name: &str) -> Result<Self, FirstNameError> {
-        if first_name.is_empty() {
-            Err(FirstNameError::Required)
-        } else if first_name.len() > 50 {
-            Err(FirstNameError::TooLong)
-        } else if !first_name_regex().is_match(&first_name) {
-            Err(FirstNameError::InvalidFormat)
-        } else {
-            Ok(FirstName(first_name.into()))
-        }
+    #[test]
+    fn test_full_name_new() {
+        let first_name = FirstName::new("John").unwrap();
+        let last_name = LastName::new("Doe").unwrap();
+        let full_name = FullName::new(first_name, last_name);
+        assert_eq!(full_name.to_string(), "John Doe");
     }
 
-    pub fn into_string(self) -> String {
-        self.0
+    #[test]
+    fn test_full_name_as_formatted_name() {
+        let first_name = FirstName::new("John").unwrap();
+        let last_name = LastName::new("Doe").unwrap();
+        let full_name = FullName::new(first_name, last_name);
+        assert_eq!(full_name.as_formatted_name(), "John Doe");
     }
-}
-
-impl Display for FirstName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl TryFrom<&str> for FirstName {
-    type Error = FirstNameError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Self::new(value)
-    }
-}
-
-impl AsRef<str> for FirstName {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-#[derive(Error, Debug, Clone, PartialEq)]
-pub enum FirstNameError {
-    #[error("first name is required")]
-    Required,
-    #[error("first name must be 50 characters or less")]
-    TooLong,
-    #[error("first name must be at least one character in length, starting with a capital letter")]
-    InvalidFormat,
-}
-
-fn last_name_regex() -> Regex {
-    Regex::new(r"^[a-zA-Z'][ a-zA-Z'-]*[a-zA-Z']?").unwrap()
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct LastName(String);
-
-impl LastName {
-    pub fn new(last_name: &str) -> Result<Self, LastNameError> {
-        if last_name.is_empty() {
-            Err(LastNameError::Required)
-        } else if last_name.len() > 50 {
-            Err(LastNameError::TooLong)
-        } else if!last_name_regex().is_match(&last_name) {
-            Err(LastNameError::InvalidFormat)
-        } else {
-            Ok(LastName(last_name.into()))
-        }
-    }
-}
-
-impl Display for LastName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl TryFrom<&str> for LastName {
-    type Error = LastNameError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Self::new(value)
-    }
-}
-
-impl AsRef<str> for LastName {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-#[derive(Error, Debug, Clone, PartialEq)]
-pub enum LastNameError {
-    #[error("last name is required")]
-    Required,
-    #[error("last name must be 50 characters or less")]
-    TooLong,
-    #[error("last name must be at least one character in length")]
-    InvalidFormat,
 }

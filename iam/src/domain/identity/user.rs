@@ -1,17 +1,10 @@
-mod username;
-mod password;
-
-pub use password::{EncryptedPassword, PlainPassword};
-pub use username::Username;
-
-use crate::domain::identity::{ContactInformation, Enablement, FullName, Person, TenantId, UserDescriptor};
+use crate::domain::identity::{ContactInformation, Enablement, EncryptedPassword, FullName, Person, PlainPassword, TenantId};
 use anyhow::Result;
-use argon2::{PasswordHasher, PasswordVerifier};
-use common::validate;
-use rand::Rng;
-use std::fmt::Display;
+use common::{constrained_string, validate};
 
-const NEW_PASSWORD: &str = "new password";
+constrained_string!(Username, 1, 255);
+
+const NEW_PASSWORD: &str = "new_password";
 
 /// User is the aggregate root entity representing a user in the system.
 #[derive(Debug, Clone, PartialEq)]
@@ -100,15 +93,5 @@ impl User {
         validate::not_equals(NEW_PASSWORD, new_ref.as_ref(), self.username.as_ref())?;
         self.password = new_ref.encrypt()?;
         Ok(())
-    }
-}
-
-impl Into<UserDescriptor> for User {
-    fn into(self) -> UserDescriptor {
-        UserDescriptor {
-            tenant_id: self.tenant_id.clone(),
-            username: self.username.clone(),
-            email_address: self.person.email_address().clone(),
-        }
     }
 }

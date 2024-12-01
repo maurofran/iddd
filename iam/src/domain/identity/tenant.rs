@@ -1,7 +1,10 @@
-use crate::domain::identity::{InvitationDescription, InvitationDescriptor, InvitationRedefiner, RegistrationInvitation, TenantId};
+use crate::domain::identity::{InvitationDescription, InvitationDescriptor, InvitationValidity, RegistrationInvitation, TenantId};
 use anyhow::Result;
-use std::fmt::Display;
 use thiserror::Error;
+use common::constrained_string;
+
+constrained_string!(TenantName, 70);
+constrained_string!(TenantDescription, 255);
 
 // Tenant struct represent the aggregate root of the tenant domain.
 pub struct Tenant {
@@ -119,10 +122,11 @@ impl Tenant {
     }
 
     /// Redefine an existing registration invitation for the `Tenant`.
-    pub fn redefine_invitation_as(&mut self, identifier: &str, redefiner_fn: InvitationRedefiner) -> Result<()> {
+    pub fn redefine_invitation_as(&mut self, identifier: &str, validity: InvitationValidity) -> Result<()> {
         self.assert_active()?;
         if let Some(invitation) = self.invitation_mut(identifier) {
-            invitation.redefine_as(redefiner_fn).map_err(|e| e.into())
+            invitation.redefine_as(validity);
+            Ok(())
         } else {
             Err(TenantError::InvitationExists(identifier.to_string()).into())
         }
@@ -161,117 +165,6 @@ impl Tenant {
             TenantStatus::Active => Ok(()),
             _ => Err(TenantError::NotActive),
         }
-    }
-}
-
-/// The name of a `Tenant`.
-#[derive(Debug, Clone, PartialEq)]
-pub struct TenantName(String);
-
-/// The error for the name of a `Tenant`.
-#[derive(Error, Debug, Clone, PartialEq)]
-pub enum TenantNameError {
-    #[error("tenant name is required")]
-    Required,
-    #[error("tenant name must be 100 characters or less")]
-    TooLong,
-}
-
-impl TenantName {
-    /// New creates a new `TenantName` from a given string.
-    pub fn new(name: &str) -> Result<Self, TenantNameError> {
-        if name.is_empty() {
-            Err(TenantNameError::Required)
-        } else if name.len() > 100 {
-            Err(TenantNameError::TooLong)
-        } else {
-            Ok(Self(name.into()))
-        }
-    }
-
-    /// Converts the `TenantName` into a string.
-    pub fn into_string(self) -> String {
-        self.0
-    }
-}
-
-impl Display for TenantName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl TryFrom<&str> for TenantName {
-    type Error = TenantNameError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        TenantName::new(value)
-    }
-}
-
-impl AsRef<str> for TenantName {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-/// The description of a `Tenant`.
-#[derive(Debug, Clone, PartialEq)]
-pub struct TenantDescription(String);
-
-#[derive(Error, Debug, Clone, PartialEq)]
-pub enum TenantDescriptionError {
-    #[error("tenant description is required")]
-    Required,
-    #[error("tenant description must be 100 characters or less")]
-    Long
-}
-
-impl TenantDescription {
-    /// New creates a new `TenantDescription` from a given string.
-    pub fn new(description: &str) -> Result<Self, TenantDescriptionError> {
-        if description.is_empty() {
-            Err(TenantDescriptionError::Required)
-        } else if description.len() > 100 {
-            Err(TenantDescriptionError::Long)
-        } else {
-            Ok(Self(description.into()))
-        }
-    }
-
-    /// New creates a new `TenantDescription` from a given string, returning `None` if the string is
-    /// empty.
-    pub fn new_option(description: &str) -> Result<Option<Self>, TenantDescriptionError> {
-        if description.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(Self::new(description)?))
-        }
-    }
-
-    /// Converts the `TenantDescription` into a string.
-    pub fn into_string(self) -> String {
-        self.0
-    }
-}
-
-impl Display for TenantDescription {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl TryFrom<&str> for TenantDescription {
-    type Error = TenantDescriptionError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        TenantDescription::new(value)
-    }
-}
-
-impl AsRef<str> for TenantDescription {
-    fn as_ref(&self) -> &str {
-        &self.0
     }
 }
 

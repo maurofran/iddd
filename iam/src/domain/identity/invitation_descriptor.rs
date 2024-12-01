@@ -1,4 +1,4 @@
-use crate::domain::identity::{InvitationDescription, InvitationId, InvitationValidity, RegistrationInvitation, Tenant, TenantId};
+use crate::domain::identity::{InvitationDescription, InvitationId, InvitationValidity, RegistrationInvitation, TenantId};
 
 /// Value object representing an invitation.
 #[derive(Debug, Clone, PartialEq)]

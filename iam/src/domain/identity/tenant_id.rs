@@ -3,7 +3,7 @@ use common::validate;
 use std::fmt::Display;
 use uuid::Uuid;
 
-const TENANT_ID: &str = "tenant id";
+const TENANT_ID: &str = "tenant_id";
 
 /// A value object representing a unique tenant identifier.
 #[derive(Debug, Clone, PartialEq)]
