@@ -28,22 +28,14 @@ impl Display for TenantId {
     }
 }
 
-impl TryFrom<&str> for TenantId {
-    type Error = anyhow::Error;
-
-    fn try_from(value: &str) -> Result<Self> {
-        TenantId::new(value)
-    }
-}
-
 impl From<Uuid> for TenantId {
     fn from(uuid: Uuid) -> Self {
         Self(uuid)
     }
 }
 
-impl From<TenantId> for Uuid {
-    fn from(tenant_id: TenantId) -> Self {
+impl From<&TenantId> for Uuid {
+    fn from(tenant_id: &TenantId) -> Self {
         tenant_id.0
     }
 }
@@ -68,17 +60,8 @@ mod tests {
     }
 
     #[test]
-    fn test_try_from_str() {
-        let tenant_id: TenantId = "123e4567-e89b-12d3-a456-426655440000".try_into().unwrap();
-        assert_eq!(
-            tenant_id.to_string(),
-            "123e4567-e89b-12d3-a456-426655440000"
-        );
-    }
-
-    #[test]
     fn test_into_uuid() {
-        let tenant_id = TenantId::new("123e4567-e89b-12d3-a456-426655440000").unwrap();
+        let tenant_id = &TenantId::new("123e4567-e89b-12d3-a456-426655440000").unwrap();
         let uuid: Uuid = tenant_id.into();
         assert_eq!(
             uuid,

@@ -36,7 +36,7 @@ impl GroupMemberService {
                     let member_group = self.group_repository.find_by_name(group.tenant_id(), name);
                     match member_group {
                         Ok(nested_group) => {
-                            let is_member = self.is_member_group(nested_group, member)?;
+                            let is_member = self.is_member_group(&nested_group, member)?;
                             if is_member {
                                 return Ok(true);
                             }

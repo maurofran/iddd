@@ -20,11 +20,6 @@ macro_rules! constrained_string {
             }
         }
 
-        impl Into<String> for $type_name {
-            fn into(self) -> String {
-                self.0
-            }
-        }
 
         impl TryFrom<&str> for $type_name {
             type Error = anyhow::Error;

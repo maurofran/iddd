@@ -10,7 +10,7 @@ const NEW_PASSWORD: &str = "new_password";
 #[derive(Debug, Clone, PartialEq)]
 pub struct User {
     tenant_id: TenantId,
-    username: Username,
+    username: String,
     password: EncryptedPassword,
     enablement: Enablement,
     person: Person,
@@ -18,27 +18,30 @@ pub struct User {
 
 impl User {
     /// Hydrate a new user from the provided data.
-    pub fn hydrate(tenant_id: TenantId, username: Username, password: EncryptedPassword,
-                   enablement: Enablement, person: Person) -> Self {
-        Self {
+    pub fn hydrate(tenant_id: TenantId, username: &str, password: EncryptedPassword,
+                   enablement: Enablement, person: Person) -> Result<Self> {
+        let mut user = Self {
             tenant_id,
-            username,
+            username: String::default(),
             password,
             enablement,
             person,
-        }
+        };
+        user.set_username(username)?;
+        Ok(user)
     }
 
     /// Creates a new user with the given username, password, and person.
-    pub fn new(tenant_id: TenantId, username: Username, password: PlainPassword,
+    pub fn new(tenant_id: TenantId, username: &str, password: PlainPassword,
                enablement: Enablement, person: Person) -> Result<Self> {
         let mut user = User {
             tenant_id,
-            username,
+            username: String::default(),
             password: EncryptedPassword::default(),
             enablement,
             person,
         };
+        user.set_username(username)?;
         user.protect_password(PlainPassword::default(), password)?;
         Ok(user)
     }
@@ -47,8 +50,17 @@ impl User {
         &self.tenant_id
     }
 
-    pub fn username(&self) -> &Username {
+    pub fn username(&self) -> &str {
         &self.username
+    }
+
+    fn set_username(&mut self, username: &str) -> Result<()> {
+        const USERNAME: &str = "username";
+
+        validate::not_empty(USERNAME, username)?;
+        validate::max_length(USERNAME, username, 255)?;
+        self.username = username.into();
+        Ok(())
     }
 
     pub fn password(&self) -> &EncryptedPassword {
