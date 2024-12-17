@@ -17,8 +17,8 @@ impl From<&RegistrationInvitation> for Row {
         Row {
             id: invitation.id().unwrap_or(i32::default()),
             tenant_id: i32::default(),
-            identifier: invitation.invitation_id().into(),
-            description: invitation.description().into(),
+            identifier: invitation.invitation_id().clone().into_string(),
+            description: invitation.description().clone().into_string(),
             valid_from: invitation.validity().start_date().map(|s| s.clone()),
             until: invitation.validity().end_date().map(|e| e.clone()),
         }

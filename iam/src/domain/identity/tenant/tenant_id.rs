@@ -1,42 +1,30 @@
 use anyhow::Result;
+use derive_more::{AsRef, Deref, Display, From};
 use common::validate;
-use std::fmt::Display;
 use uuid::Uuid;
 
 const TENANT_ID: &str = "tenant_id";
 
 /// A value object representing a unique tenant identifier.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Display, Deref, AsRef, From, sqlx::Type)]
+#[sqlx(transparent)]
 pub struct TenantId(Uuid);
 
 impl TenantId {
-    /// Creates a new random tenant identifier.
+    /// Creates a new random `TenantId`.
     pub fn random() -> Self {
         Self(Uuid::new_v4())
     }
 
-    /// Creates a new tenant identifier from a raw string.
-    pub fn new(raw_tenant_id: &str) -> Result<Self> {
-        let uuid = validate::uuid(TENANT_ID, raw_tenant_id)?;
-        Ok(uuid.into())
+    /// Creates a new `TenantId` from a raw string.
+    pub fn new(raw: &str) -> Result<Self> {
+        let uuid = validate::uuid(TENANT_ID, raw)?;
+        Ok(Self(uuid))
     }
-}
 
-impl Display for TenantId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<Uuid> for TenantId {
-    fn from(uuid: Uuid) -> Self {
-        Self(uuid)
-    }
-}
-
-impl From<&TenantId> for Uuid {
-    fn from(tenant_id: &TenantId) -> Self {
-        tenant_id.0
+    /// Converts the tenant identifier into a [Uuid].
+    pub fn into_uuid(self) -> Uuid {
+        self.0
     }
 }
 
@@ -62,7 +50,7 @@ mod tests {
     #[test]
     fn test_into_uuid() {
         let tenant_id = &TenantId::new("123e4567-e89b-12d3-a456-426655440000").unwrap();
-        let uuid: Uuid = tenant_id.into();
+        let uuid: Uuid = tenant_id.clone().into_uuid();
         assert_eq!(
             uuid,
             Uuid::parse_str("123e4567-e89b-12d3-a456-426655440000").unwrap()

@@ -1,8 +1,15 @@
-use crate::domain::identity::{InvitationDescriptor, RegistrationInvitation, TenantId, Validity};
+mod tenant_name;
+mod tenant_description;
+pub mod tenant_id;
+
+use crate::domain::identity::{InvitationDescription, InvitationDescriptor, RegistrationInvitation, Validity};
 use anyhow::{bail, Result};
 use chrono::{DateTime, Utc};
-use common::validate;
 use thiserror::Error;
+
+pub use tenant_id::TenantId;
+pub use tenant_name::TenantName;
+pub use tenant_description::TenantDescription;
 
 /// Value object representing the [Tenant] possible error conditions.
 #[derive(Error, Debug, Clone, PartialEq)]
@@ -15,35 +22,14 @@ pub enum TenantError {
     InvitationNotFound(String),
 }
 
-fn validate_name(name: &str) -> Result<String> {
-    const NAME: &str = "name";
-
-    validate::not_empty(NAME, name)?;
-    validate::max_length(NAME, name, 70)?;
-    Ok(name.into())
-}
-
-fn validate_description(description: Option<&str>) -> Result<Option<String>> {
-    const DESCRIPTION: &str = "description";
-
-    match description {
-        Some(description) => {
-            validate::not_empty(DESCRIPTION, description)?;
-            validate::max_length(DESCRIPTION, description, 255)?;
-            Ok(Some(description.into()))
-        }
-        None => Ok(None),
-    }
-}
-
 /// Tenant struct represent the aggregate root of the tenant domain.
 #[derive(Debug)]
 pub struct Tenant {
     id: Option<i32>,
     version: i32,
     tenant_id: TenantId,
-    name: String,
-    description: Option<String>,
+    name: TenantName,
+    description: Option<TenantDescription>,
     active: bool,
     invitations: Vec<RegistrationInvitation>,
     created_at: DateTime<Utc>,
@@ -58,41 +44,39 @@ impl Tenant {
         id: i32,
         version: i32,
         tenant_id: TenantId,
-        name: &str,
-        description: Option<&str>,
+        name: TenantName,
+        description: Option<TenantDescription>,
         active: bool,
         invitations: Vec<RegistrationInvitation>,
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
-    ) -> Result<Self> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             id: Some(id),
             version,
             tenant_id,
-            name: validate_name(name)?,
-            description: validate_description(description)?,
+            name,
+            description,
             active,
             invitations,
             created_at,
             updated_at,
-        })
+        }
     }
 
     /// Creates a new [Tenant] with the given name, description, and status.
-    ///
-    /// It may return a [common::validate::Error] if any of the provided values fail validation.
-    pub fn new(name: &str, description: Option<&str>, active: bool) -> Result<Self> {
-        Ok(Self {
+    pub fn new(name: TenantName, description: Option<TenantDescription>, active: bool) -> Self {
+        Self {
             id: None,
             version: 0,
             tenant_id: TenantId::random(),
-            name: validate_name(name)?,
-            description: validate_description(description)?,
+            name,
+            description,
             active,
             invitations: Vec::new(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
-        })
+        }
     }
 
     /// Gets the unique identifier of the [Tenant]. This field represents a numerical unique
@@ -115,13 +99,13 @@ impl Tenant {
     }
 
     /// Returns the name of the [Tenant].
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &TenantName {
         &self.name
     }
 
     /// Returns the optional description of the [Tenant].
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref()
+    pub fn description(&self) -> &Option<TenantDescription> {
+        &self.description
     }
 
     /// Returns `true` if the [Tenant] is active.
@@ -199,11 +183,12 @@ impl Tenant {
         if self.is_registration_available_through(description)? {
             bail!(TenantError::InvitationExists(description.into()));
         }
-        let invitation = RegistrationInvitation::new(description)?;
+        let description = InvitationDescription::new(description)?;
+        let invitation = RegistrationInvitation::new(description.clone());
         self.invitations.push(invitation);
-        match self.invitation_mut(description) {
+        match self.invitation_mut(description.as_ref()) {
             Some(invitation) => Ok(invitation),
-            None => bail!(TenantError::InvitationNotFound(description.into())),
+            None => bail!(TenantError::InvitationNotFound(description.into_string())),
         }
     }
 

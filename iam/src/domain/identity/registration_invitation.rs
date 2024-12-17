@@ -1,32 +1,17 @@
+mod invitation_description;
+mod invitation_id;
+
 use crate::domain::identity::Validity;
-use anyhow::Result;
 use chrono::Utc;
-use common::validate;
-use uuid::Uuid;
-
-
-fn validate_id(invitation_id: &str) -> Result<String> {
-    const INVITATION_ID: &str = "invitation_id";
-
-    validate::not_empty(INVITATION_ID, invitation_id)?;
-    validate::max_length(INVITATION_ID, invitation_id, 36)?;
-    Ok(invitation_id.into())
-}
-
-fn validate_description(description: &str) -> Result<String> {
-    const DESCRIPTION: &str = "description";
-
-    validate::not_empty(DESCRIPTION, description)?;
-    validate::max_length(DESCRIPTION, description, 255)?;
-    Ok(description.into())
-}
+pub use invitation_description::InvitationDescription;
+pub use invitation_id::InvitationId;
 
 /// Entity representing an invitation to register a tenant.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RegistrationInvitation {
     id: Option<i32>,
-    invitation_id: String,
-    description: String,
+    invitation_id: InvitationId,
+    description: InvitationDescription,
     validity: Validity,
 }
 
@@ -34,29 +19,27 @@ impl RegistrationInvitation {
     /// Function used by repositories to hydrate [RegistrationInvitation] from the database.
     pub fn hydrate(
         id: i32,
-        invitation_id: &str,
-        description: &str,
+        invitation_id: InvitationId,
+        description: InvitationDescription,
         validity: Validity,
-    ) -> Result<Self> {
-        Ok(RegistrationInvitation {
+    ) -> Self {
+        RegistrationInvitation {
             id: Some(id),
-            invitation_id: validate_id(invitation_id)?,
-            description: validate_description(description)?,
+            invitation_id,
+            description,
             validity,
-        })
+        }
     }
 
     /// Create a new registration invitation with the given description and default validity
     /// (open-ended).
-    ///
-    /// It may return a [common::validate::Error] if the description is empty or too long.
-    pub fn new(description: &str) -> Result<Self> {
-        Ok(Self {
+    pub fn new(description: InvitationDescription) -> Self {
+        Self {
             id: None,
-            invitation_id: Uuid::new_v4().to_string(),
-            description: validate_description(description)?,
+            invitation_id: InvitationId::random(),
+            description,
             validity: Validity::OpenEnded,
-        })
+        }
     }
 
     /// Get the unique identifier of the invitation.
@@ -65,12 +48,12 @@ impl RegistrationInvitation {
     }
 
     /// Get the logical invitation unique identifier.
-    pub fn invitation_id(&self) -> &str {
+    pub fn invitation_id(&self) -> &InvitationId {
         &self.invitation_id
     }
 
     /// Get the description of the invitation.
-    pub fn description(&self) -> &str {
+    pub fn description(&self) -> &InvitationDescription {
         &self.description
     }
 
@@ -81,7 +64,7 @@ impl RegistrationInvitation {
 
     /// Check if the invitation can be identified by the given identifier.
     pub fn is_identified_by(&self, identifier: &str) -> bool {
-        self.invitation_id == identifier || self.description == identifier
+        self.invitation_id.as_ref() == identifier || self.description.as_ref() == identifier
     }
 
     /// Check if the invitation is available now.
@@ -98,82 +81,83 @@ impl RegistrationInvitation {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::Result;
 
     #[test]
-    fn test_hydrate() {
+    fn test_hydrate() -> Result<()>{
         let id = 1;
-        let invitation_id = Uuid::new_v4().to_string();
-        let description = "a_description";
+        let invitation_id = InvitationId::random();
+        let description = InvitationDescription::new("a_description")?;
         let validity = Validity::OpenEnded;
 
-        let fixture = RegistrationInvitation::hydrate(
-            id,
-            &invitation_id,
-            description,
-            validity.clone(),
-        ).unwrap();
+        let fixture = RegistrationInvitation::hydrate(id, invitation_id.clone(),
+                                                      description.clone(), validity.clone());
 
         assert_eq!(fixture.id(), Some(id));
         assert_eq!(fixture.invitation_id(), &invitation_id);
-        assert_eq!(fixture.description(), description);
+        assert_eq!(fixture.description(), &description);
         assert_eq!(fixture.validity(), &validity);
+        Ok(())
     }
 
     #[test]
-    pub fn test_new() {
-        let description = "a_description";
-        let fixture = RegistrationInvitation::new(description).unwrap();
+    pub fn test_new() -> Result<()>{
+        let description = InvitationDescription::new("a_description")?;
+        let fixture = RegistrationInvitation::new(description.clone());
 
         assert_eq!(fixture.id(), None);
-        assert_eq!(fixture.description(), description);
+        assert_eq!(fixture.description(), &description);
         assert_eq!(fixture.validity(), &Validity::OpenEnded);
+        Ok(())
     }
 
     #[test]
-    pub fn test_is_identified_by_id() {
-        let description = "a_description";
-        let fixture = RegistrationInvitation::new(description).unwrap();
+    pub fn test_is_identified_by_id() -> Result<()> {
+        let description = InvitationDescription::new("a_description")?;
+        let fixture = RegistrationInvitation::new(description);
 
-        let identifier = fixture.invitation_id().as_ref();
-
-        assert!(fixture.is_identified_by(identifier));
+        assert!(fixture.is_identified_by(fixture.invitation_id()));
+        Ok(())
     }
 
     #[test]
-    pub fn test_is_identified_by_description() {
-        let description = "a_description";
-        let fixture = RegistrationInvitation::new(description).unwrap();
+    pub fn test_is_identified_by_description() -> Result<()>  {
+        let description = InvitationDescription::new("a_description")?;
+        let fixture = RegistrationInvitation::new(description);
 
-        let identifier = fixture.description();
-
-        assert!(fixture.is_identified_by(identifier));
+        assert!(fixture.is_identified_by(fixture.description()));
+        Ok(())
     }
 
     #[test]
-    pub fn test_is_identified_by_not_identified() {
-        let description = "a_description";
-        let fixture = RegistrationInvitation::new(description).unwrap();
+    pub fn test_is_identified_by_not_identified() -> Result<()>{
+        let description = InvitationDescription::new("a_description")?;
+        let fixture = RegistrationInvitation::new(description);
 
         assert!(!fixture.is_identified_by("other"));
+        Ok(())
     }
 
     #[test]
-    pub fn test_is_available_open_ended() {
-        let description = "a_description";
-        let fixture = RegistrationInvitation::new(description).unwrap();
+    pub fn test_is_available_open_ended() -> Result<()>  {
+        let description = InvitationDescription::new("a_description")?;
+        let fixture = RegistrationInvitation::new(description);
 
         assert!(fixture.is_available());
+        Ok(())
     }
 
     #[test]
-    pub fn test_redefine_as() {
-        let description = "a_description";
-        let mut fixture = RegistrationInvitation::new(description).unwrap();
+    pub fn test_redefine_as() -> Result<()>  {
+        let description = InvitationDescription::new("a_description")?;
+        let mut fixture = RegistrationInvitation::new(description);
 
-        let new_validity = Validity::new(None, Some(Utc::now() + chrono::Duration::days(30))).unwrap();
+        let new_validity =
+            Validity::new(None, Some(Utc::now() + chrono::Duration::days(30))).unwrap();
 
         fixture.redefine_as(new_validity.clone());
 
         assert_eq!(fixture.validity(), &new_validity);
+        Ok(())
     }
 }

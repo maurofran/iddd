@@ -64,7 +64,7 @@ impl<'a> crate::domain::identity::TenantRepository for TenantRepository<'a> {
     }
 
     async fn find_by_id(&self, id: &TenantId) -> Result<Tenant> {
-        let tenant_row = tenant::load_by_id(self.pool, id.into()).await?;
+        let tenant_row = tenant::load_by_id(self.pool, id.clone().into_uuid()).await?;
         match tenant_row {
             Some(row) => {
                 let invitations_rows = invitation::load_all(self.pool, row.id).await?;
@@ -78,17 +78,20 @@ impl<'a> crate::domain::identity::TenantRepository for TenantRepository<'a> {
 fn to_tenant(row: tenant::Row, invitations_rows: Vec<invitation::Row>) -> Result<Tenant> {
     let invitations = to_invitations(invitations_rows)?;
     let tenant_id: TenantId = row.uuid.try_into()?;
-    Tenant::hydrate(
+    Ok(Tenant::hydrate(
         row.id,
         row.version,
         tenant_id,
-        &row.name,
-        row.description.as_deref(),
+        row.name.try_into()?,
+        match row.description {
+            Some(d) => Some(d.try_into()?),
+            None => None,
+        },
         row.enabled,
         invitations,
         row.created_at,
         row.updated_at,
-    )
+    ))
 }
 
 fn to_invitations(rows: Vec<invitation::Row>) -> Result<Vec<RegistrationInvitation>> {
@@ -99,5 +102,10 @@ fn to_invitations(rows: Vec<invitation::Row>) -> Result<Vec<RegistrationInvitati
 
 fn to_invitation(row: invitation::Row) -> Result<RegistrationInvitation> {
     let validity = Validity::new(row.valid_from, row.until)?;
-    RegistrationInvitation::hydrate(row.id, &row.identifier, &row.description, validity)
+    Ok(RegistrationInvitation::hydrate(
+        row.id,
+        row.identifier.try_into()?,
+        row.description.try_into()?,
+        validity,
+    ))
 }
