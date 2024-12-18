@@ -21,9 +21,9 @@ impl From<&Tenant> for Row {
         Row {
             id: tenant.id().unwrap_or(i32::default()),
             version: tenant.version(),
-            uuid: tenant.tenant_id().clone().into_uuid(),
-            name: tenant.name().clone().into_string(),
-            description: tenant.description().clone().map(|s| s.into_string()),
+            uuid: tenant.tenant_id().clone().into(),
+            name: tenant.name().clone().into(),
+            description: tenant.description().clone().map(|s| s.into()),
             enabled: tenant.active(),
             created_at: Utc::now(),
             updated_at: Utc::now(),

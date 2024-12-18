@@ -1,15 +1,16 @@
-mod tenant_name;
-mod tenant_description;
-pub mod tenant_id;
+mod tenant_id;
 
-use crate::domain::identity::{InvitationDescription, InvitationDescriptor, RegistrationInvitation, Validity};
+use crate::domain::identity::{
+    InvitationDescription, InvitationDescriptor, RegistrationInvitation, Validity,
+};
 use anyhow::{bail, Result};
 use chrono::{DateTime, Utc};
+use common::declare_simple_type;
+pub use tenant_id::TenantId;
 use thiserror::Error;
 
-pub use tenant_id::TenantId;
-pub use tenant_name::TenantName;
-pub use tenant_description::TenantDescription;
+declare_simple_type!(TenantName, 70);
+declare_simple_type!(TenantDescription, 255);
 
 /// Value object representing the [Tenant] possible error conditions.
 #[derive(Error, Debug, Clone, PartialEq)]
@@ -188,7 +189,7 @@ impl Tenant {
         self.invitations.push(invitation);
         match self.invitation_mut(description.as_ref()) {
             Some(invitation) => Ok(invitation),
-            None => bail!(TenantError::InvitationNotFound(description.into_string())),
+            None => bail!(TenantError::InvitationNotFound(description.into())),
         }
     }
 

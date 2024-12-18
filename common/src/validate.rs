@@ -117,7 +117,7 @@ pub fn in_range<T: PartialOrd + ToString>(name: &str, value: T, min: T, max: T) 
     }
 }
 
-pub fn matches(name: &str, value: &str, regex: Regex) -> Result<(), Error> {
+pub fn matches(name: &str, value: &str, regex: &Regex) -> Result<(), Error> {
     if !regex.is_match(value) {
         Err(Error::InvalidFormat(name.into()))
     } else {

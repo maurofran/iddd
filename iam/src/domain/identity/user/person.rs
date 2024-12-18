@@ -1,4 +1,8 @@
-use crate::domain::identity::{ContactInformation, EmailAddress, FullName};
+mod full_name;
+mod contact_information;
+
+pub use full_name::*;
+pub use contact_information::*;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Person {

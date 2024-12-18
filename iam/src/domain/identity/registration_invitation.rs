@@ -1,10 +1,10 @@
-mod invitation_description;
-mod invitation_id;
-
 use crate::domain::identity::Validity;
 use chrono::Utc;
-pub use invitation_description::InvitationDescription;
-pub use invitation_id::InvitationId;
+use uuid::Uuid;
+use common::declare_simple_type;
+
+declare_simple_type!(InvitationId, 36);
+declare_simple_type!(InvitationDescription, 255);
 
 /// Entity representing an invitation to register a tenant.
 #[derive(Debug, Clone, PartialEq)]
@@ -36,7 +36,7 @@ impl RegistrationInvitation {
     pub fn new(description: InvitationDescription) -> Self {
         Self {
             id: None,
-            invitation_id: InvitationId::random(),
+            invitation_id: InvitationId::new(&Uuid::new_v4().to_string()).unwrap(),
             description,
             validity: Validity::OpenEnded,
         }
@@ -84,14 +84,18 @@ mod tests {
     use anyhow::Result;
 
     #[test]
-    fn test_hydrate() -> Result<()>{
+    fn test_hydrate() -> Result<()> {
         let id = 1;
-        let invitation_id = InvitationId::random();
+        let invitation_id = InvitationId::new(&Uuid::new_v4().to_string())?;
         let description = InvitationDescription::new("a_description")?;
         let validity = Validity::OpenEnded;
 
-        let fixture = RegistrationInvitation::hydrate(id, invitation_id.clone(),
-                                                      description.clone(), validity.clone());
+        let fixture = RegistrationInvitation::hydrate(
+            id,
+            invitation_id.clone(),
+            description.clone(),
+            validity.clone(),
+        );
 
         assert_eq!(fixture.id(), Some(id));
         assert_eq!(fixture.invitation_id(), &invitation_id);
@@ -101,7 +105,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_new() -> Result<()>{
+    pub fn test_new() -> Result<()> {
         let description = InvitationDescription::new("a_description")?;
         let fixture = RegistrationInvitation::new(description.clone());
 
@@ -121,7 +125,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_is_identified_by_description() -> Result<()>  {
+    pub fn test_is_identified_by_description() -> Result<()> {
         let description = InvitationDescription::new("a_description")?;
         let fixture = RegistrationInvitation::new(description);
 
@@ -130,7 +134,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_is_identified_by_not_identified() -> Result<()>{
+    pub fn test_is_identified_by_not_identified() -> Result<()> {
         let description = InvitationDescription::new("a_description")?;
         let fixture = RegistrationInvitation::new(description);
 
@@ -139,7 +143,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_is_available_open_ended() -> Result<()>  {
+    pub fn test_is_available_open_ended() -> Result<()> {
         let description = InvitationDescription::new("a_description")?;
         let fixture = RegistrationInvitation::new(description);
 
@@ -148,7 +152,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_redefine_as() -> Result<()>  {
+    pub fn test_redefine_as() -> Result<()> {
         let description = InvitationDescription::new("a_description")?;
         let mut fixture = RegistrationInvitation::new(description);
 

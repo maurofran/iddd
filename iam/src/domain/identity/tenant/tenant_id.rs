@@ -1,13 +1,12 @@
 use anyhow::Result;
-use derive_more::{AsRef, Deref, Display, From};
+use derive_more::{AsRef, Deref, Display, From, Into};
 use common::validate;
 use uuid::Uuid;
 
 const TENANT_ID: &str = "tenant_id";
 
 /// A value object representing a unique tenant identifier.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Display, Deref, AsRef, From, sqlx::Type)]
-#[sqlx(transparent)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Display, Deref, AsRef, From, Into)]
 pub struct TenantId(Uuid);
 
 impl TenantId {
@@ -20,11 +19,6 @@ impl TenantId {
     pub fn new(raw: &str) -> Result<Self> {
         let uuid = validate::uuid(TENANT_ID, raw)?;
         Ok(Self(uuid))
-    }
-
-    /// Converts the tenant identifier into a [Uuid].
-    pub fn into_uuid(self) -> Uuid {
-        self.0
     }
 }
 
@@ -50,7 +44,7 @@ mod tests {
     #[test]
     fn test_into_uuid() {
         let tenant_id = &TenantId::new("123e4567-e89b-12d3-a456-426655440000").unwrap();
-        let uuid: Uuid = tenant_id.clone().into_uuid();
+        let uuid: Uuid = tenant_id.clone().into();
         assert_eq!(
             uuid,
             Uuid::parse_str("123e4567-e89b-12d3-a456-426655440000").unwrap()

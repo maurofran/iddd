@@ -1,6 +1,4 @@
-use crate::domain::identity::{
-    RegistrationInvitation, Tenant, TenantId, TenantRepositoryError, Validity,
-};
+use crate::domain::identity::{InvitationDescription, InvitationId, RegistrationInvitation, Tenant, TenantDescription, TenantId, TenantName, TenantRepositoryError, Validity};
 use crate::ports::adapters::postgres::{invitation, tenant};
 use anyhow::Result;
 use sqlx::Pool;
@@ -64,7 +62,7 @@ impl<'a> crate::domain::identity::TenantRepository for TenantRepository<'a> {
     }
 
     async fn find_by_id(&self, id: &TenantId) -> Result<Tenant> {
-        let tenant_row = tenant::load_by_id(self.pool, id.clone().into_uuid()).await?;
+        let tenant_row = tenant::load_by_id(self.pool, id.clone().into()).await?;
         match tenant_row {
             Some(row) => {
                 let invitations_rows = invitation::load_all(self.pool, row.id).await?;
@@ -82,10 +80,11 @@ fn to_tenant(row: tenant::Row, invitations_rows: Vec<invitation::Row>) -> Result
         row.id,
         row.version,
         tenant_id,
-        row.name.try_into()?,
-        match row.description {
-            Some(d) => Some(d.try_into()?),
-            None => None,
+        TenantName::new(&row.name)?,
+        if let Some(d) = row.description {
+            Some(TenantDescription::new(&d)?)
+        } else {
+            None
         },
         row.enabled,
         invitations,
@@ -104,8 +103,8 @@ fn to_invitation(row: invitation::Row) -> Result<RegistrationInvitation> {
     let validity = Validity::new(row.valid_from, row.until)?;
     Ok(RegistrationInvitation::hydrate(
         row.id,
-        row.identifier.try_into()?,
-        row.description.try_into()?,
+        InvitationId::new(&row.identifier)?,
+        InvitationDescription::new(&row.description)?,
         validity,
     ))
 }

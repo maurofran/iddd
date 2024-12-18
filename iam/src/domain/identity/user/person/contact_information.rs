@@ -1,4 +1,11 @@
-use crate::domain::identity::{EmailAddress, PostalAddress, Telephone};
+use common::declare_simple_type;
+
+mod postal_address;
+
+pub use postal_address::*;
+
+declare_simple_type!(EmailAddress, 255, r"\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*");
+declare_simple_type!(Telephone, 5, 20, r"((\(\d{3}\))|(\d{3}-))\d{3}-\d{4}");
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ContactInformation {

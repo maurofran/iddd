@@ -22,7 +22,7 @@ regex = "1.11.1"
 common = { version = "0.1.0", path = "../common" }
 rand = "0.8.5"
 lazy_static = "1.5.0"
-derive_more = { version = "1.0.0" , features = ["display", "deref", "from", "as_ref"]}
+derive_more = { version = "1.0.0" , features = ["display", "deref", "from", "as_ref", "into"]}
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3
