@@ -15,7 +15,7 @@ pub trait UserRepository {
     fn add(&self, user: User) -> Result<User>;
     fn update(&self, user: User) -> Result<User>;
     fn remove(&self, user: User) -> Result<()>;
-    fn find_by_username(&self, tenant_id: &TenantId, username: &str) -> Result<User>;
+    fn find_by_username(&self, tenant_id: &TenantId, username: &Username) -> Result<User>;
     fn find_all_similarly_named(&self, id: &TenantId, first_name_prefix: &str,
                                 last_name_prefix: &str) -> Result<Vec<User>>;
 }

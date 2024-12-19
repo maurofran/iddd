@@ -4,7 +4,6 @@ use crate::domain::identity::{
     InvitationDescription, InvitationDescriptor, RegistrationInvitation, Validity,
 };
 use anyhow::{bail, Result};
-use chrono::{DateTime, Utc};
 use common::declare_simple_type;
 pub use tenant_id::TenantId;
 use thiserror::Error;
@@ -26,71 +25,40 @@ pub enum TenantError {
 /// Tenant struct represent the aggregate root of the tenant domain.
 #[derive(Debug)]
 pub struct Tenant {
-    id: Option<i32>,
-    version: i32,
     tenant_id: TenantId,
     name: TenantName,
     description: Option<TenantDescription>,
     active: bool,
     invitations: Vec<RegistrationInvitation>,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
 }
 
 impl Tenant {
     /// Hydrates an existing [Tenant] from the persistent storage.
-    ///
-    /// It may return a [common::validate::Error] if any of the provided values fail validation.
     pub fn hydrate(
-        id: i32,
-        version: i32,
         tenant_id: TenantId,
         name: TenantName,
         description: Option<TenantDescription>,
         active: bool,
         invitations: Vec<RegistrationInvitation>,
-        created_at: DateTime<Utc>,
-        updated_at: DateTime<Utc>,
     ) -> Self {
         Self {
-            id: Some(id),
-            version,
             tenant_id,
             name,
             description,
             active,
             invitations,
-            created_at,
-            updated_at,
         }
     }
 
     /// Creates a new [Tenant] with the given name, description, and status.
     pub fn new(name: TenantName, description: Option<TenantDescription>, active: bool) -> Self {
         Self {
-            id: None,
-            version: 0,
             tenant_id: TenantId::random(),
             name,
             description,
             active,
             invitations: Vec::new(),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
         }
-    }
-
-    /// Gets the unique identifier of the [Tenant]. This field represents a numerical unique
-    /// identifier assigned to each tenant once added to the [TenantRepository].
-    /// Its value is `None` for tenants not yet added to any repository.
-    pub fn id(&self) -> Option<i32> {
-        self.id
-    }
-
-    /// The version of the [Tenant]. This field is used to track changes made to the [Tenant] and
-    /// to perform an optimistic locking when updating the [Tenant] in the [TenantRepository].
-    pub fn version(&self) -> i32 {
-        self.version
     }
 
     /// Returns the logical unique identifier of the [Tenant]. This field is a randomly generated
@@ -119,30 +87,15 @@ impl Tenant {
         &self.invitations
     }
 
-    /// Returns the creation date of the [Tenant].
-    /// This field is automatically initialized when the [Tenant] is created.
-    pub fn created_at(&self) -> &DateTime<Utc> {
-        &self.created_at
-    }
-
-    /// Returns the updated date of the [Tenant].
-    /// This field is automatically initialized when the [Tenant] is created and then is updated
-    /// every time a change is made.
-    pub fn updated_at(&self) -> &DateTime<Utc> {
-        &self.updated_at
-    }
-
     /// Activates the [Tenant].
     pub fn activate(&mut self) {
         self.active = true;
-        self.updated_at = Utc::now();
         // TODO Raise an event to indicate tenant activation
     }
 
     /// Deactivates the [Tenant].
     pub fn deactivate(&mut self) {
         self.active = false;
-        self.updated_at = Utc::now();
         // TODO Raise an event to indicate tenant deactivation
     }
 
@@ -245,5 +198,12 @@ impl Tenant {
         } else {
             Ok(())
         }
+    }
+}
+
+impl PartialEq for Tenant {
+    /// Two `Tenant`s are equal if they have the same tenant identifier.
+    fn eq(&self, other: &Self) -> bool {
+        return self.tenant_id == other.tenant_id
     }
 }

@@ -6,10 +6,16 @@ use common::declare_simple_type;
 declare_simple_type!(InvitationId, 36);
 declare_simple_type!(InvitationDescription, 255);
 
+impl InvitationId {
+    /// Generates a new random `InvitationId`.
+    pub fn random() -> Self {
+        Self(Uuid::new_v4().to_string())
+    }
+}
+
 /// Entity representing an invitation to register a tenant.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct RegistrationInvitation {
-    id: Option<i32>,
     invitation_id: InvitationId,
     description: InvitationDescription,
     validity: Validity,
@@ -18,13 +24,11 @@ pub struct RegistrationInvitation {
 impl RegistrationInvitation {
     /// Function used by repositories to hydrate [RegistrationInvitation] from the database.
     pub fn hydrate(
-        id: i32,
         invitation_id: InvitationId,
         description: InvitationDescription,
         validity: Validity,
     ) -> Self {
         RegistrationInvitation {
-            id: Some(id),
             invitation_id,
             description,
             validity,
@@ -35,16 +39,10 @@ impl RegistrationInvitation {
     /// (open-ended).
     pub fn new(description: InvitationDescription) -> Self {
         Self {
-            id: None,
-            invitation_id: InvitationId::new(&Uuid::new_v4().to_string()).unwrap(),
+            invitation_id: InvitationId::random(),
             description,
             validity: Validity::OpenEnded,
         }
-    }
-
-    /// Get the unique identifier of the invitation.
-    pub fn id(&self) -> Option<i32> {
-        self.id
     }
 
     /// Get the logical invitation unique identifier.
@@ -78,6 +76,13 @@ impl RegistrationInvitation {
     }
 }
 
+impl PartialEq for RegistrationInvitation {
+    /// Two `RegistrationInvitation`s are equal if they have the same `invitation_id`.
+    fn eq(&self, other: &Self) -> bool {
+        self.invitation_id == other.invitation_id
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -85,19 +90,16 @@ mod tests {
 
     #[test]
     fn test_hydrate() -> Result<()> {
-        let id = 1;
         let invitation_id = InvitationId::new(&Uuid::new_v4().to_string())?;
         let description = InvitationDescription::new("a_description")?;
         let validity = Validity::OpenEnded;
 
         let fixture = RegistrationInvitation::hydrate(
-            id,
             invitation_id.clone(),
             description.clone(),
             validity.clone(),
         );
 
-        assert_eq!(fixture.id(), Some(id));
         assert_eq!(fixture.invitation_id(), &invitation_id);
         assert_eq!(fixture.description(), &description);
         assert_eq!(fixture.validity(), &validity);
@@ -109,7 +111,6 @@ mod tests {
         let description = InvitationDescription::new("a_description")?;
         let fixture = RegistrationInvitation::new(description.clone());
 
-        assert_eq!(fixture.id(), None);
         assert_eq!(fixture.description(), &description);
         assert_eq!(fixture.validity(), &Validity::OpenEnded);
         Ok(())

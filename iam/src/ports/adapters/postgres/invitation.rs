@@ -1,6 +1,7 @@
 use crate::domain::identity::RegistrationInvitation;
 use chrono::{DateTime, Utc};
 use sqlx::{query, query_as, Executor, Postgres};
+use uuid::Uuid;
 
 #[derive(sqlx::FromRow, Debug, PartialEq)]
 pub struct Row {
@@ -15,7 +16,7 @@ pub struct Row {
 impl From<&RegistrationInvitation> for Row {
     fn from(invitation: &RegistrationInvitation) -> Self {
         Row {
-            id: invitation.id().unwrap_or(i32::default()),
+            id: i32::default(),
             tenant_id: i32::default(),
             identifier: invitation.invitation_id().clone().into(),
             description: invitation.description().clone().into(),
@@ -27,7 +28,7 @@ impl From<&RegistrationInvitation> for Row {
 
 pub async fn insert_all<E>(
     executor: &mut E,
-    tenant_id: i32,
+    tenant_id: &Uuid,
     invitations: Vec<Row>,
 ) -> Result<Vec<Row>, sqlx::Error>
 where
@@ -40,7 +41,7 @@ where
     Ok(results)
 }
 
-pub async fn insert<E>(executor: &mut E, tenant_id: i32, row: &Row) -> Result<Row, sqlx::Error>
+pub async fn insert<E>(executor: &mut E, tenant_id: &Uuid, row: &Row) -> Result<Row, sqlx::Error>
 where
     for<'e> &'e mut E: Executor<'e, Database = Postgres>,
 {
@@ -49,7 +50,9 @@ where
         r#"
         INSERT
           INTO invitation (tenant_id, identifier, description, valid_from, until)
-        VALUES ($1, $2, $3, $4, $5)
+        SELECT t.id, $2, $3, $4, $5
+          FROM tenant t
+         WHERE t.uuid = $1
         RETURNING *
         "#,
         tenant_id,
@@ -63,7 +66,7 @@ where
 
 pub async fn update_invitations<E>(
     executor: &mut E,
-    tenant_id: i32,
+    tenant_id: &Uuid,
     invitations: Vec<Row>,
 ) -> Result<Vec<Row>, sqlx::Error>
 where
@@ -128,31 +131,33 @@ where
     query.fetch_one(executor).await
 }
 
-pub async fn delete_all<E>(executor: &mut E, tenant_id: i32) -> Result<(), sqlx::Error>
+pub async fn delete_all<E>(executor: &mut E, tenant_id: &Uuid) -> Result<(), sqlx::Error>
 where
     for<'e> &'e mut E: Executor<'e, Database = Postgres>,
 {
     let query = query!(
         r#"
-        DELETE
-          FROM invitation
-         WHERE tenant_id = $1
+        DELETE FROM invitation i
+         USING tenant t
+         WHERE i.tenant_id = t.id
+           AND t.uuid = $1
         "#,
         tenant_id
     );
     query.execute(executor).await.map(|_| ())
 }
 
-pub async fn load_all<'e, E>(executor: E, tenant_id: i32) -> Result<Vec<Row>, sqlx::Error>
+pub async fn load_all<'e, E>(executor: E, tenant_id: &Uuid) -> Result<Vec<Row>, sqlx::Error>
 where
     E: Executor<'e, Database = Postgres>, //    for<'e> &'e mut E: Executor<'e, Database = Postgres>
 {
     let query = query_as!(
         Row,
         r#"
-        SELECT *
-          FROM invitation
-         WHERE tenant_id = $1
+        SELECT i.*
+          FROM invitation i
+               INNER JOIN tenant t ON i.tenant_id = t.id
+         WHERE t.uuid = $1
         "#,
         tenant_id
     );

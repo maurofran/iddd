@@ -2,7 +2,7 @@ mod enablement;
 mod password;
 mod person;
 
-use crate::domain::identity::{TenantId};
+use crate::domain::identity::TenantId;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use common::{declare_simple_type, validate};
@@ -16,42 +16,30 @@ declare_simple_type!(Username, 255);
 const NEW_PASSWORD: &str = "new_password";
 
 /// User is the aggregate root entity representing a user in the system.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug)]
 pub struct User {
-    id: Option<i32>,
-    version: i32,
     tenant_id: TenantId,
     username: Username,
     password: EncryptedPassword,
     enablement: Enablement,
     person: Person,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
 }
 
 impl User {
     /// Hydrate a new user from the provided data.
     pub fn hydrate(
-        id: i32,
-        version: i32,
         tenant_id: TenantId,
         username: Username,
         password: EncryptedPassword,
         enablement: Enablement,
         person: Person,
-        created_at: DateTime<Utc>,
-        updated_at: DateTime<Utc>,
     ) -> Self {
         Self {
-            id: Some(id),
-            version,
             tenant_id,
             username,
             password,
             enablement,
             person,
-            created_at,
-            updated_at,
         }
     }
 
@@ -64,15 +52,11 @@ impl User {
         person: Person,
     ) -> Result<Self> {
         let mut user = Self {
-            id: None,
-            version: 0,
             tenant_id,
             username,
             password: EncryptedPassword::default(),
             enablement,
             person,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
         };
         user.protect_password(PlainPassword::default(), password)?;
         Ok(user)
@@ -82,7 +66,7 @@ impl User {
         &self.tenant_id
     }
 
-    pub fn username(&self) -> &str {
+    pub fn username(&self) -> &Username {
         &self.username
     }
 
@@ -139,5 +123,12 @@ impl User {
         validate::not_equals(NEW_PASSWORD, new_ref.as_ref(), self.username.as_ref())?;
         self.password = new_ref.encrypt()?;
         Ok(())
+    }
+}
+
+impl PartialEq for User {
+    /// Two `User`s are equal if they both shares the same `tenant_id` and `username`.
+    fn eq(&self, other: &Self) -> bool {
+        self.tenant_id == other.tenant_id && self.username == other.username
     }
 }

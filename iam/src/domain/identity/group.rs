@@ -1,69 +1,55 @@
 use crate::domain::identity::{GroupMember, GroupMemberService, TenantId, User};
 use anyhow::Result;
-use common::validate;
+use common::{declare_simple_type, validate};
 use std::ops::Deref;
 
 const TENANT_ID: &str = "tenant_id";
 
+declare_simple_type!(GroupName, 70);
+declare_simple_type!(GroupDescription, 255);
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Group {
     tenant_id: TenantId,
-    name: String,
-    description: String,
+    name: GroupName,
+    description: Option<GroupDescription>,
     members: Vec<GroupMember>,
 }
 
 impl Group {
-    pub fn hydrate(tenant_id: TenantId, name: &str, description: &str, members: Vec<GroupMember>) -> Result<Self> {
-        let mut group = Self {
+    pub fn hydrate(
+        tenant_id: TenantId,
+        name: GroupName,
+        description: Option<GroupDescription>,
+        members: Vec<GroupMember>,
+    ) -> Self {
+        Self {
             tenant_id,
-            name: String::default(),
-            description: String::default(),
+            name,
+            description,
             members,
-        };
-        group.set_name(name)?;
-        group.set_description(description)?;
-        Ok(group)
+        }
     }
 
-    pub fn new(tenant_id: TenantId, name: &str, description: &str) -> Result<Self> {
-        let mut group = Self {
+    pub fn new(tenant_id: TenantId, name: GroupName, description: Option<GroupDescription>) -> Self {
+        Self {
             tenant_id,
-            name: String::default(),
-            description: String::default(),
+            name,
+            description,
             members: Vec::new(),
-        };
-        group.set_name(name)?;
-        group.set_description(description)?;
-        Ok(group)
+        }
     }
 
     pub fn tenant_id(&self) -> &TenantId {
         &self.tenant_id
     }
 
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &GroupName {
         &self.name
     }
 
-    fn set_name(&mut self, name: &str) -> Result<()> {
-        const NAME: &str = "name";
-        validate::not_empty(NAME, name)?;
-        validate::max_length(NAME, name, 70)?;
-        self.name = name.into();
-        Ok(())
-    }
-
-    pub fn description(&self) -> &str {
+    pub fn description(&self) -> &Option<GroupDescription> {
         &self.description
-    }
-
-    fn set_description(&mut self, description: &str) -> Result<()> {
-        const DESCRIPTION: &str = "description";
-        validate::not_empty(DESCRIPTION, description)?;
-        validate::max_length(DESCRIPTION, description, 255)?;
-        self.description = description.into();
-        Ok(())
     }
 
     pub fn members(&self) -> &[GroupMember] {
@@ -72,7 +58,10 @@ impl Group {
 
     pub fn add_group(&mut self, group: &Group, member_service: &GroupMemberService) -> Result<()> {
         validate::equals(TENANT_ID, group.tenant_id(), self.tenant_id())?;
-        validate::is_false(member_service.is_member_group(group, &self.deref().into())?, "group recursion detected")?;
+        validate::is_false(
+            member_service.is_member_group(group, &self.deref().into())?,
+            "group recursion detected",
+        )?;
         let member: GroupMember = group.into();
         if !self.members.contains(&member) {
             self.members.push(member);
@@ -90,7 +79,11 @@ impl Group {
         Ok(())
     }
 
-    pub fn is_member(&self, user: &User, group_member_service: &GroupMemberService) -> Result<bool> {
+    pub fn is_member(
+        &self,
+        user: &User,
+        group_member_service: &GroupMemberService,
+    ) -> Result<bool> {
         validate::equals(TENANT_ID, user.tenant_id(), self.tenant_id())?;
         validate::is_true(user.is_enabled(), "user is not enabled")?;
 

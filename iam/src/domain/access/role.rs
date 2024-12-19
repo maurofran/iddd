@@ -1,91 +1,59 @@
-use crate::domain::identity::{Group, GroupMemberService, TenantId, User};
+use crate::domain::identity::{Group, GroupDescription, GroupMemberService, GroupName, TenantId, User};
 use anyhow::Result;
-use chrono::{DateTime, Utc};
-use common::validate;
+use common::{declare_simple_type, validate};
 
 const TENANT_ID: &str = "tenant_id";
-const NAME: &str = "name";
-const DESCRIPTION: & str = "description";
 
 const ROLE_GROUP_PREFIX: &str = "ROLE-INTERNAL-GROUP: ";
 
-fn validate_name(name: &str) -> Result<String> {
-    validate::not_empty(NAME, name)?;
-    validate::max_length(NAME, name, 70)?;
-    Ok(name.into())
-}
-
-fn validate_description(description: Option<&str>) -> Result<Option<String>> {
-    match description {
-        Some(description) => {
-            validate::not_empty(DESCRIPTION, description)?;
-            validate::max_length(DESCRIPTION, description, 255)?;
-            Ok(Some(description.into()))
-        }
-        None => Ok(None),
-    }
-}
+declare_simple_type!(RoleName, 70);
+declare_simple_type!(RoleDescription, 255);
 
 #[derive(Debug, Clone)]
 pub struct Role {
-    id: Option<i32>,
-    version: i32,
     tenant_id: TenantId,
-    name: String,
-    description: Option<String>,
+    name: RoleName,
+    description: Option<RoleDescription>,
     supports_nesting: bool,
     group: Group,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
 }
 
 impl Role {
     /// Re-create a [Role] instance with provided values from the persistent storage.
     pub fn hydrate(
-        id: i32,
-        version: i32,
         tenant_id: TenantId,
-        name: &str,
-        description: Option<&str>,
+        name: RoleName,
+        description: Option<RoleDescription>,
         supports_nesting: bool,
         group: Group,
-        created_at: DateTime<Utc>,
-        updated_at: DateTime<Utc>,
-    ) -> Result<Self> {
-        Ok(Self {
-            id: Some(id),
-            version,
+    ) -> Self {
+        Self {
             tenant_id,
-            name: validate_name(name)?,
-            description: validate_description(description)?,
+            name,
+            description,
             supports_nesting,
             group,
-            created_at,
-            updated_at,
-        })
+        }
     }
 
     /// Creates a new [Role] instance with a provided nested group.
     pub fn new(
         tenant_id: TenantId,
-        name: &str,
-        description: Option<&str>,
+        name: RoleName,
+        description: Option<RoleDescription>,
         supports_nesting: bool,
     ) -> Result<Self> {
-        let group_name = format!("{}{}", ROLE_GROUP_PREFIX, name);
-        let group_description = format!("Role backing group for {}", name);
-        let nested_group = Group::new(tenant_id.clone(), &group_name, &group_description)?;
+        let group_name = &format!("{}{}", ROLE_GROUP_PREFIX, name);
+        let group_description = &format!("Role backing group for {}", name);
+        let nested_group = Group::new(tenant_id.clone(), GroupName::new(group_name)?,
+                                      Some(GroupDescription::new(group_description)?));
 
         Ok(Self {
-            id: None,
-            version: 0,
             tenant_id,
-            name: validate_name(name)?,
-            description: validate_description(description)?,
+            name,
+            description,
             supports_nesting,
             group: nested_group,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
         })
     }
 
@@ -95,13 +63,13 @@ impl Role {
     }
 
     /// Returns the name of the [Role].
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &RoleName {
         &self.name
     }
 
     /// Returns the description of the [Role].
-    pub fn description(&self) -> Option<&str> {
-        self.description.as_deref().clone()
+    pub fn description(&self) -> &Option<RoleDescription> {
+        &self.description
     }
 
     /// Returns true if the [Role] supports group nesting.

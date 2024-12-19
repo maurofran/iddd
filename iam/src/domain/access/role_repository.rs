@@ -1,4 +1,4 @@
-use crate::domain::access::Role;
+use crate::domain::access::{Role, RoleName};
 use crate::domain::identity::TenantId;
 use anyhow::Result;
 use thiserror::Error;
@@ -15,6 +15,6 @@ pub trait RoleRepository {
     fn add(&self, role: Role) -> Result<Role>;
     fn update(&self, role: Role) -> Result<Role>;
     fn remove(&self, role: Role) -> Result<()>;
-    fn find_by_name(&self, tenant_id: &TenantId, name: &str) -> Result<Role>;
+    fn find_by_name(&self, tenant_id: &TenantId, name: &RoleName) -> Result<Role>;
     fn find_all(&self, id: &TenantId) -> Result<Vec<Role>>;
 }

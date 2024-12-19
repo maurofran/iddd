@@ -1,4 +1,4 @@
-use crate::domain::identity::{Group, TenantId};
+use crate::domain::identity::{Group, GroupName, TenantId};
 use anyhow::Result;
 use thiserror::Error;
 
@@ -14,6 +14,6 @@ pub trait GroupRepository {
     fn add(&self, group: Group) -> Result<Group>;
     fn update(&self, group: Group) -> Result<Group>;
     fn remove(&self, group: Group) -> Result<()>;
-    fn find_by_name(&self, tenant_id: &TenantId, name: &str) -> Result<Group>;
+    fn find_by_name(&self, tenant_id: &TenantId, name: &GroupName) -> Result<Group>;
     fn find_all(&self, id: &TenantId) -> Result<Vec<Group>>;
 }

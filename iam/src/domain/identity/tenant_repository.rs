@@ -1,6 +1,6 @@
 use thiserror::Error;
 use anyhow::Result;
-use crate::domain::identity::{Tenant, TenantId};
+use crate::domain::identity::{Tenant, TenantId, TenantName};
 
 /// Error types for `TenantRepository`.
 #[derive(Error, Debug, Clone, PartialEq)]
@@ -8,7 +8,7 @@ pub enum TenantRepositoryError {
     #[error("no tenant found for {0}")]
     NotFound(TenantId),
     #[error("no tenant found for name '{0}'")]
-    NameNotFound(String),
+    NameNotFound(TenantName),
     #[error("a tenant with name '{0}' already exists")]
     Exists(String)
 }
@@ -30,7 +30,7 @@ pub trait TenantRepository {
     /// Finds a [Tenant] by its name.
     /// It returns an [TenantRepositoryError::NameNotFound] if no tenant with the given `name`
     /// exists in the storage.
-    async fn find_by_name(&self, name: &str) -> Result<Tenant>;
+    async fn find_by_name(&self, name: &TenantName) -> Result<Tenant>;
     /// Finds a [Tenant] by its unique identifier.
     /// It returns a [TenantRepositoryError::NotFound] if no tenant with the given ID exists in the
     /// storage.
