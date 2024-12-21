@@ -18,15 +18,15 @@ pub trait TenantRepository {
     /// Adds a new [Tenant] to the repository.
     /// It returns an [TenantRepositoryError::Exists] if a tenant with the same name already exists,
     /// or the representation of the stored tenant if successful.
-    async fn add(&self, tenant: Tenant) -> Result<Tenant>;
+    async fn add(&self, tenant: &Tenant) -> Result<()>;
     /// Updates an existing [Tenant] already in the repository.
     /// It returns an [TenantRepositoryError::NotFound] if no tenant with the given ID exists,
     /// [TenantRepositoryError::Exists] if a tenant with the same name already exists or the
     /// representation of the updated tenant if successful.
-    async fn update(&self, tenant: Tenant) -> Result<Tenant>;
+    async fn update(&self, tenant: &Tenant) -> Result<()>;
     /// Removes a [Tenant] from the repository.
     /// It returns an [TenantRepositoryError::NotFound] if no tenant with the given ID exists,
-    async fn remove(&self, tenant: Tenant) -> Result<()>;
+    async fn remove(&self, tenant: &Tenant) -> Result<()>;
     /// Finds a [Tenant] by its name.
     /// It returns an [TenantRepositoryError::NameNotFound] if no tenant with the given `name`
     /// exists in the storage.

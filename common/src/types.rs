@@ -9,10 +9,8 @@ macro_rules! declare_simple_type {
             PartialOrd,
             Ord,
             Hash,
-            derive_more::Display,
             derive_more::Deref,
             derive_more::AsRef,
-            derive_more::Into,
         )]
         pub struct $type_name(String);
 
@@ -30,11 +28,31 @@ macro_rules! declare_simple_type {
             }
         }
 
+        impl std::fmt::Display for $type_name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.0)
+            }
+        }
+
         impl TryFrom<&str> for $type_name {
             type Error = anyhow::Error;
 
             fn try_from(value: &str) -> anyhow::Result<Self> {
                 Self::new(value)
+            }
+        }
+
+        impl TryFrom<String> for $type_name {
+            type Error = anyhow::Error;
+
+            fn try_from(value: String) -> anyhow::Result<Self> {
+                Self::new(&value)
+            }
+        }
+
+        impl Into<String> for &$type_name {
+            fn into(self) -> String {
+                self.0.clone()
             }
         }
     };

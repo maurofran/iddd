@@ -36,9 +36,9 @@ impl From<Uuid> for TenantId {
     }
 }
 
-impl Into<Uuid> for TenantId {
+impl Into<Uuid> for &TenantId {
     fn into(self) -> Uuid {
-        (&self).0.clone()
+        self.0.clone()
     }
 }
 

@@ -137,8 +137,8 @@ impl Tenant {
         if self.is_registration_available_through(description)? {
             bail!(TenantError::InvitationExists(description.into()));
         }
-        let description = InvitationDescription::new(description)?;
-        let invitation = RegistrationInvitation::new(description.clone());
+        let invitation_description = InvitationDescription::new(description)?;
+        let invitation = RegistrationInvitation::new(invitation_description);
         self.invitations.push(invitation);
         match self.invitation_mut(description.as_ref()) {
             Some(invitation) => Ok(invitation),
