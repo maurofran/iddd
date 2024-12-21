@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{query_file, query_file_as, Pool};
 use uuid::Uuid;
 
-/// Implementation of TenantRepository for PostgreSQL
+/// Implementation of [TenantRepository] for PostgresSQL
 pub struct TenantRepository<'a> {
     pool: &'a Pool<sqlx::Postgres>,
 }

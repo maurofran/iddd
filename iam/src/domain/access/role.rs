@@ -1,4 +1,4 @@
-use crate::domain::identity::{Group, GroupDescription, GroupMemberService, GroupName, TenantId, User};
+use crate::domain::identity::{Group, GroupDescription, GroupMemberService, GroupName, GroupRepository, TenantId, User, UserRepository};
 use anyhow::Result;
 use common::{declare_simple_type, validate};
 
@@ -83,17 +83,17 @@ impl Role {
     }
 
     /// Assigns a [Group] to the [Role].
-    pub fn assign_group(
+    pub async fn assign_group<'a, G: GroupRepository, U: UserRepository>(
         &mut self,
         group: &Group,
-        member_service: &GroupMemberService,
+        member_service: &GroupMemberService<'a, G, U>,
     ) -> Result<()> {
         validate::is_true(
             self.supports_nesting,
             "this role does not support group nesting",
         )?;
         validate::equals(TENANT_ID, group.tenant_id(), self.tenant_id())?;
-        self.group.add_group(group, member_service)
+        self.group.add_group(group, member_service).await
     }
 
     /// Assigns a [User] to the [Role].
@@ -103,8 +103,8 @@ impl Role {
     }
 
     /// Returns true if the [User] is a member of the [Role]'s group.
-    pub fn is_in_role(&self, user: &User, member_service: &GroupMemberService) -> Result<bool> {
-        self.group.is_member(user, member_service)
+    pub async fn is_in_role<'a, G: GroupRepository, U: UserRepository>(&self, user: &User, member_service: &GroupMemberService<'a, G, U>) -> Result<bool> {
+        self.group.is_member(user, member_service).await
     }
 
     /// Removes a [Group] from the [Role].

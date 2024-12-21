@@ -1,4 +1,4 @@
-use crate::domain::identity::{GroupMember, GroupMemberService, TenantId, User};
+use crate::domain::identity::{GroupMember, GroupMemberService, GroupRepository, TenantId, User, UserRepository};
 use anyhow::Result;
 use common::{declare_simple_type, validate};
 use std::ops::Deref;
@@ -56,10 +56,10 @@ impl Group {
         &self.members
     }
 
-    pub fn add_group(&mut self, group: &Group, member_service: &GroupMemberService) -> Result<()> {
+    pub async fn add_group<'a, G: GroupRepository, U: UserRepository>(&mut self, group: &Group, member_service: &GroupMemberService<'a, G, U>) -> Result<()> {
         validate::equals(TENANT_ID, group.tenant_id(), self.tenant_id())?;
         validate::is_false(
-            member_service.is_member_group(group, &self.deref().into())?,
+            member_service.is_member_group(group, &self.deref().into()).await?,
             "group recursion detected",
         )?;
         let member: GroupMember = group.into();
@@ -79,19 +79,19 @@ impl Group {
         Ok(())
     }
 
-    pub fn is_member(
+    pub async fn is_member<'a, G: GroupRepository, U: UserRepository>(
         &self,
         user: &User,
-        group_member_service: &GroupMemberService,
+        group_member_service: &GroupMemberService<'a, G, U>,
     ) -> Result<bool> {
         validate::equals(TENANT_ID, user.tenant_id(), self.tenant_id())?;
         validate::is_true(user.is_enabled(), "user is not enabled")?;
 
         let member: GroupMember = user.into();
         if self.members.contains(&member) {
-            group_member_service.confirm_user(&self, user)
+            group_member_service.confirm_user(&self, user).await
         } else {
-            group_member_service.is_user_in_nested_group(&self, user)
+            group_member_service.is_user_in_nested_group(&self, user).await
         }
     }
 

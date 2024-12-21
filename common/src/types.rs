@@ -60,7 +60,7 @@ macro_rules! declare_simple_type {
             }
         }
 
-        impl Deref for $type_name {
+        impl std::ops::Deref for $type_name {
             type Target = str;
 
             fn deref(&self) -> &Self::Target {

@@ -11,9 +11,9 @@ pub enum Enablement {
 
 impl Enablement {
     /// Creates a new [Enablement] instance.
-    pub fn new(enabled: bool, validity: &Validity) -> Self {
+    pub fn new(enabled: bool, validity: Validity) -> Self {
         match enabled {
-            true => Enablement::Enabled(validity.clone()),
+            true => Enablement::Enabled(validity),
             false => Enablement::Disabled,
         }
     }
@@ -69,13 +69,13 @@ mod tests {
 
     #[test]
     pub fn new_not_enabled() {
-        let fixture = Enablement::new(false, &Validity::OpenEnded);
+        let fixture = Enablement::new(false, Validity::OpenEnded);
         assert_eq!(fixture, Enablement::Disabled);
     }
 
     #[test]
     pub fn new_always_enabled() {
-        let fixture = Enablement::new(true, &Validity::OpenEnded);
+        let fixture = Enablement::new(true, Validity::OpenEnded);
         assert_eq!(fixture, Enablement::Enabled(Validity::OpenEnded));
     }
 
@@ -83,7 +83,7 @@ mod tests {
     pub fn new_enabled_with_start_date() {
         let start_date = Utc::now();
         let validity = Validity::new(Some(start_date), None).unwrap();
-        let fixture = Enablement::new(true, &validity);
+        let fixture = Enablement::new(true, validity.clone());
         assert_eq!(fixture, Enablement::Enabled(validity));
     }
 
@@ -91,7 +91,7 @@ mod tests {
     pub fn new_enabled_with_end_date() {
         let end_date = Utc::now();
         let validity = Validity::new(None, Some(end_date)).unwrap();
-        let fixture = Enablement::new(true, &validity);
+        let fixture = Enablement::new(true, validity.clone());
         assert_eq!(fixture, Enablement::Enabled(validity));
     }
 
@@ -100,7 +100,7 @@ mod tests {
         let start_date = Utc::now();
         let end_date = start_date + chrono::Duration::days(30);
         let validity = Validity::new(Some(start_date), Some(end_date)).unwrap();
-        let fixture = Enablement::new(true, &validity);
+        let fixture = Enablement::new(true, validity.clone());
         assert_eq!(fixture, Enablement::Enabled(validity));
     }
 
