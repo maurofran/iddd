@@ -8,9 +8,7 @@ macro_rules! declare_simple_type {
             Eq,
             PartialOrd,
             Ord,
-            Hash,
-            derive_more::Deref,
-            derive_more::AsRef,
+            Hash
         )]
         pub struct $type_name(String);
 
@@ -53,6 +51,20 @@ macro_rules! declare_simple_type {
         impl Into<String> for &$type_name {
             fn into(self) -> String {
                 self.0.clone()
+            }
+        }
+
+        impl AsRef<str> for $type_name {
+            fn as_ref(&self) -> &str {
+                &self.0
+            }
+        }
+
+        impl Deref for $type_name {
+            type Target = str;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
             }
         }
     };
