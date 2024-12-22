@@ -1,11 +1,13 @@
 use crate::domain::identity::{
     BuildingNumber, City, ContactInformation, CountryCode, EmailAddress, Enablement,
     EncryptedPassword, FirstName, FullName, LastName, Person, PostalAddress, PostalCode,
-    StateProvince, StreetName, Telephone, TenantId, User, UserRepositoryError, Username, Validity,
+    StateProvince, StreetName, Telephone, TenantId, TenantRepositoryError, User,
+    UserRepositoryError, Username, Validity,
 };
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use sqlx::{query_file_as, Pool};
+use sqlx::{query_file, query_file_as, Pool};
+use sqlx::postgres::PgQueryResult;
 use uuid::Uuid;
 
 /// Implementation of [UserRepository] for PostgresSQL
@@ -17,29 +19,120 @@ impl<'a> UserRepository<'a> {
     pub fn new(pool: &'a Pool<sqlx::Postgres>) -> Self {
         UserRepository { pool }
     }
+
+    fn check_for_affected_rows(result: PgQueryResult, user: &User) -> Result<()> {
+        if result.rows_affected() == 0 {
+            return Err(UserRepositoryError::NotFound(
+                user.tenant_id().clone(),
+                user.username().clone(),
+            )
+                .into());
+        }
+        Ok(())
+    }
+
 }
 
 impl<'a> crate::domain::identity::UserRepository for UserRepository<'a> {
     async fn add(&self, user: &User) -> Result<()> {
-        todo!()
+        let tenant_id: Uuid = user.tenant_id().into();
+        let enablement = user.enablement();
+        let person = user.person();
+        let name = person.name();
+        let contact_information = person.contact_information();
+        let postal_address = contact_information.postal_address().as_ref();
+        query_file!(
+            "sql/postgres/insert_user.sql",
+            tenant_id,
+            user.username().as_ref(),
+            user.password().as_ref(),
+            enablement.enabled(),
+            enablement.validity().and_then(|v| v.start_date()),
+            enablement.validity().and_then(|v| v.end_date()),
+            name.first_name().as_ref(),
+            name.last_name().as_ref(),
+            contact_information.email_address().as_ref(),
+            postal_address.map(|pa| pa.street_name().as_ref()),
+            postal_address
+                .and_then(|pa| pa.building_number().as_ref())
+                .map(|bn| bn.as_ref()),
+            postal_address.map(|pa| pa.postal_code().as_ref()),
+            postal_address.map(|pa| pa.city().as_ref()),
+            postal_address.map(|pa| pa.state_province().as_ref()),
+            postal_address.map(|pa| pa.country_code().as_ref()),
+            contact_information
+                .primary_telephone()
+                .as_ref()
+                .map(|t| t.as_ref()),
+            contact_information
+                .secondary_telephone()
+                .as_ref()
+                .map(|t| t.as_ref()),
+        )
+        .execute(self.pool)
+        .await?;
+        Ok(())
     }
 
     async fn update(&self, user: &User) -> Result<()> {
-        todo!()
+        let tenant_id: Uuid = user.tenant_id().into();
+        let enablement = user.enablement();
+        let person = user.person();
+        let name = person.name();
+        let contact_information = person.contact_information();
+        let postal_address = contact_information.postal_address().as_ref();
+        let result = query_file!(
+            "sql/postgres/update_user.sql",
+            tenant_id,
+            user.username().as_ref(),
+            user.password().as_ref(),
+            enablement.enabled(),
+            enablement.validity().and_then(|v| v.start_date()),
+            enablement.validity().and_then(|v| v.end_date()),
+            name.first_name().as_ref(),
+            name.last_name().as_ref(),
+            contact_information.email_address().as_ref(),
+            postal_address.map(|pa| pa.street_name().as_ref()),
+            postal_address
+                .and_then(|pa| pa.building_number().as_ref())
+                .map(|bn| bn.as_ref()),
+            postal_address.map(|pa| pa.postal_code().as_ref()),
+            postal_address.map(|pa| pa.city().as_ref()),
+            postal_address.map(|pa| pa.state_province().as_ref()),
+            postal_address.map(|pa| pa.country_code().as_ref()),
+            contact_information
+                .primary_telephone()
+                .as_ref()
+                .map(|t| t.as_ref()),
+            contact_information
+                .secondary_telephone()
+                .as_ref()
+                .map(|t| t.as_ref()),
+        )
+        .execute(self.pool)
+        .await?;
+        Self::check_for_affected_rows(result, user)
     }
 
     async fn remove(&self, user: &User) -> Result<()> {
-        todo!()
+        let tenant_id: Uuid = user.tenant_id().into();
+        let result = query_file!(
+            "sql/postgres/delete_user.sql",
+            tenant_id,
+            user.username().as_ref(),
+        )
+        .execute(self.pool)
+        .await?;
+        Self::check_for_affected_rows(result, user)
     }
 
     async fn find_by_username(&self, tenant_id: &TenantId, username: &Username) -> Result<User> {
         let tenant_id_uuid: Uuid = tenant_id.into();
-        let username_str: String = username.into();
         let result = query_file_as!(
             UserAndPersonRow,
             "sql/postgres/find_user_by_username.sql",
             tenant_id_uuid,
-            username_str,
+            username.as_ref(),
         )
         .fetch_one(self.pool)
         .await;

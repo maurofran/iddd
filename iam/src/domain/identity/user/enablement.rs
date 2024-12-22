@@ -32,7 +32,7 @@ impl Enablement {
     }
 
     /// Returns the start date, if any.
-    pub fn validty(&self) -> Option<&Validity> {
+    pub fn validity(&self) -> Option<&Validity> {
         match self {
             Enablement::Enabled(validity) => Some(validity),
             _ => None,
